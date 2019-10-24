@@ -50,6 +50,40 @@ if (MEMORY_CONFIG_H_FILE)
     )
 endif()
 
+if (SEOS_TLS_IMPL_MBEDTLS)
+    list(APPEND PRIVATE_TARGET_COMPILE_DEFINITIONS
+        MBEDTLS_CONFIG_FILE="${CMAKE_CURRENT_SOURCE_DIR}/configs/MbedTLS_Config.h"
+    )
+    target_include_directories(${PROJECT_NAME}
+        PUBLIC
+        "3rdParty/mbedtls/include"
+    )
+    target_sources(${PROJECT_NAME}
+        PRIVATE
+        "3rdParty/mbedtls/library/certs.c"
+        "3rdParty/mbedtls/library/debug.c"
+        "3rdParty/mbedtls/library/error.c"
+        "3rdParty/mbedtls/library/net_sockets.c"
+        "3rdParty/mbedtls/library/pkcs11.c"
+        "3rdParty/mbedtls/library/ssl_cache.c"
+        "3rdParty/mbedtls/library/ssl_ciphersuites.c"
+        "3rdParty/mbedtls/library/ssl_cli.c"
+        "3rdParty/mbedtls/library/ssl_cookie.c"
+        "3rdParty/mbedtls/library/ssl_srv.c"
+        "3rdParty/mbedtls/library/ssl_ticket.c"
+        "3rdParty/mbedtls/library/ssl_tls.c"
+        "3rdParty/mbedtls/library/version.c"
+        "3rdParty/mbedtls/library/version_features.c"
+        "3rdParty/mbedtls/library/x509.c"
+        "3rdParty/mbedtls/library/x509_create.c"
+        "3rdParty/mbedtls/library/x509_crl.c"
+        "3rdParty/mbedtls/library/x509_crt.c"
+        "3rdParty/mbedtls/library/x509_csr.c"
+        "3rdParty/mbedtls/library/x509write_crt.c"
+        "3rdParty/mbedtls/library/x509write_csr.c"
+    )
+endif()
+
 target_compile_definitions(${PROJECT_NAME}
     PUBLIC
         ${PUBLIC_TARGET_COMPILE_DEFINITIONS}
@@ -63,7 +97,6 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-    seos_libs
     seos_core_api
     seos_crypto
 )
