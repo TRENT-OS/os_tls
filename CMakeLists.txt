@@ -4,8 +4,6 @@ project(seos_tls C)
 
 add_library(
     ${PROJECT_NAME} STATIC
-
-    "src/SeosTls.c"
     "src/SeosTlsApi.c"
 )
 if (ENABLE_LINT)
@@ -60,27 +58,36 @@ if (SEOS_TLS_IMPL_MBEDTLS)
     )
     target_sources(${PROJECT_NAME}
         PRIVATE
-        "3rdParty/mbedtls/library/certs.c"
-        "3rdParty/mbedtls/library/debug.c"
-        "3rdParty/mbedtls/library/error.c"
-        "3rdParty/mbedtls/library/net_sockets.c"
-        "3rdParty/mbedtls/library/pkcs11.c"
-        "3rdParty/mbedtls/library/ssl_cache.c"
+#        "3rdParty/mbedtls/library/certs.c"
+#        "3rdParty/mbedtls/library/debug.c"
+#        "3rdParty/mbedtls/library/error.c"
+#        "3rdParty/mbedtls/library/net_sockets.c"
+#        "3rdParty/mbedtls/library/pkcs11.c"
+#        "3rdParty/mbedtls/library/ssl_cache.c"
         "3rdParty/mbedtls/library/ssl_ciphersuites.c"
         "3rdParty/mbedtls/library/ssl_cli.c"
-        "3rdParty/mbedtls/library/ssl_cookie.c"
+#        "3rdParty/mbedtls/library/ssl_cookie.c"
         "3rdParty/mbedtls/library/ssl_srv.c"
-        "3rdParty/mbedtls/library/ssl_ticket.c"
+#        "3rdParty/mbedtls/library/ssl_ticket.c"
         "3rdParty/mbedtls/library/ssl_tls.c"
-        "3rdParty/mbedtls/library/version.c"
-        "3rdParty/mbedtls/library/version_features.c"
-        "3rdParty/mbedtls/library/x509.c"
-        "3rdParty/mbedtls/library/x509_create.c"
-        "3rdParty/mbedtls/library/x509_crl.c"
-        "3rdParty/mbedtls/library/x509_crt.c"
-        "3rdParty/mbedtls/library/x509_csr.c"
-        "3rdParty/mbedtls/library/x509write_crt.c"
-        "3rdParty/mbedtls/library/x509write_csr.c"
+#        "3rdParty/mbedtls/library/version.c"
+#        "3rdParty/mbedtls/library/version_features.c"
+#        "3rdParty/mbedtls/library/x509.c"
+#        "3rdParty/mbedtls/library/x509_create.c"
+#        "3rdParty/mbedtls/library/x509_crl.c"
+#        "3rdParty/mbedtls/library/x509_crt.c"
+#        "3rdParty/mbedtls/library/x509_csr.c"
+#        "3rdParty/mbedtls/library/x509write_crt.c"
+#        "3rdParty/mbedtls/library/x509write_csr.c"
+#        "3rdParty/mbedtls/library/aes.c"
+        "3rdParty/mbedtls/library/ccm.c"
+#        "3rdParty/mbedtls/library/cipher.c"
+#        "3rdParty/mbedtls/library/ctr_drbg.c"
+        "3rdParty/mbedtls/library/platform.c"
+        "3rdParty/mbedtls/library/entropy.c"
+        "3rdParty/mbedtls/library/entropy_poll.c"
+        "3rdParty/mbedtls/library/md.c"
+        "3rdParty/mbedtls/library/sha256.c"
     )
 endif()
 
@@ -99,6 +106,7 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
     seos_core_api
     seos_crypto
+    seos_libs
 )
 
 # if invoked from the SOES sandbox, provide a documentation build target
