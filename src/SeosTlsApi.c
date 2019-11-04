@@ -11,6 +11,9 @@
 #include "mbedtls/ssl.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
+#include "mbedtls/debug.h"
+
+#include "SeosCryptoApi.h"
 
 #include "SeosTlsApi.h"
 #include "SeosTlsApi_Impl.h"
@@ -30,55 +33,93 @@ static void logDebug(void* ctx,
 
     // we can't call Debug_LOG_DEBUG() because this will print file and line
     // where it is used - which is here. This is quite useless information.
-    printf("[mbedTLS] %s:%d: %s", file, line, str );
+    if (strlen(file) > 16)
+    {
+        printf("[mbedTLS] ...%s:%04i: %s", file + (strlen(file) - 16), line, str );
+    }
+    else
+    {
+        printf("[mbedTLS] %s:%04i: %s", file, line, str );
+    }
+}
+
+static int getRndBytes(void*            ctx,
+                       unsigned char*   buf,
+                       size_t           len)
+{
+    return SeosCryptoApi_rngGetBytes(ctx, 0, (void*) buf,
+                                     len) == SEOS_SUCCESS ? 0 : 1;
 }
 
 // Public functions ------------------------------------------------------------
 
 seos_err_t
-SeosTlsApi_init(SeosTlsCtx*                api,
-                const SeosTls_Callbacks*   cbs,
-                void*                      ctx)
+SeosTlsApi_init(SeosTlsCtx*                 tlsCtx,
+                SeosCryptoCtx*              cryptoCtx,
+                const SeosTls_Callbacks*    cbs,
+                void*                       sockCtx)
 {
     int rc;
-    Debug_ASSERT_SELF(api);
+    Debug_ASSERT_SELF(tlsCtx);
 
-    // Setup RNG
-    mbedtls_entropy_init(&api->mbedtls.entropy);
-    mbedtls_ctr_drbg_init(&api->mbedtls.drbg);
-    if ((rc = mbedtls_ctr_drbg_seed(&api->mbedtls.drbg, mbedtls_entropy_func,
-                                    &api->mbedtls.entropy, NULL, 0)) != 0)
-    {
-        Debug_LOG_ERROR("mbedtls_ctr_drbg_seed() with code -%d", -rc);
-        return SEOS_ERROR_ABORTED;
-    }
+    mbedtls_debug_set_threshold(100);
 
     // Setup config
-    mbedtls_ssl_config_init(&api->mbedtls.conf);
-    if ((rc = mbedtls_ssl_config_defaults (&api->mbedtls.conf,
-                                           MBEDTLS_SSL_IS_CLIENT,
-                                           MBEDTLS_SSL_TRANSPORT_STREAM,
-                                           MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
+    mbedtls_ssl_config_init(&tlsCtx->mbedtls.conf);
+    if ((rc = mbedtls_ssl_config_defaults(&tlsCtx->mbedtls.conf,
+                                          MBEDTLS_SSL_IS_CLIENT,
+                                          MBEDTLS_SSL_TRANSPORT_STREAM,
+                                          MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
     {
-        Debug_LOG_ERROR("mbedtls_ssl_config_defaults() with code -%d", -rc);
+        Debug_LOG_ERROR("mbedtls_ssl_config_defaults() with code -0x%04x", -rc);
         return SEOS_ERROR_ABORTED;
     }
-    mbedtls_ssl_conf_dbg(&api->mbedtls.conf, logDebug, NULL);
-    mbedtls_ssl_conf_rng(&api->mbedtls.conf, mbedtls_ctr_drbg_random,
-                         &api->mbedtls.drbg);
+    mbedtls_ssl_conf_dbg(&tlsCtx->mbedtls.conf, logDebug, NULL);
+    mbedtls_ssl_conf_rng(&tlsCtx->mbedtls.conf, getRndBytes, cryptoCtx);
+
+    // -------------------------------------------------------------------------
+    // Todo: This should not stay in production code!!!
+    mbedtls_ssl_conf_authmode(&tlsCtx->mbedtls.conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
+    // -------------------------------------------------------------------------
 
     // Start session
-    mbedtls_ssl_init(&api->mbedtls.ssl);
-    if ((rc = mbedtls_ssl_setup(&api->mbedtls.ssl, &api->mbedtls.conf)) != 0)
+    mbedtls_ssl_init(&tlsCtx->mbedtls.ssl);
+    if ((rc = mbedtls_ssl_setup(&tlsCtx->mbedtls.ssl, &tlsCtx->mbedtls.conf)) != 0)
     {
-        Debug_LOG_ERROR("mbedtls_ssl_setup() with code -%d", -rc);
+        Debug_LOG_ERROR("mbedtls_ssl_setup() with code -0x%04x", -rc);
         return SEOS_ERROR_ABORTED;
     }
 
-    mbedtls_ssl_set_bio(&api->mbedtls.ssl, api->nwCtx, api->nw.send, api->nw.recv,
-                        NULL);
+    mbedtls_ssl_set_bio(&tlsCtx->mbedtls.ssl, sockCtx, cbs->send, cbs->recv, NULL);
 
     return SEOS_SUCCESS;
+}
+
+seos_err_t
+SeosTlsApi_handshake(SeosTlsCtx* api)
+{
+    int rc;
+
+    while (true)
+    {
+        if ((rc = mbedtls_ssl_handshake(&api->mbedtls.ssl)) == 0)
+        {
+            return SEOS_SUCCESS;
+        }
+        else if ((rc == MBEDTLS_ERR_SSL_WANT_READ) ||
+                 (rc == MBEDTLS_ERR_SSL_WANT_WRITE) )
+        {
+            // mbedTLS required looping over mbedtls_ssl_handshake() for the handshake.
+            // This leave more control for the calling application, but since we don't
+            // need such detail at the moment, it's wrapped in this function
+            continue;
+        }
+        else
+        {
+            Debug_LOG_ERROR("mbedtls_ssl_handshake() with code -0x%04x", -rc);
+            return SEOS_ERROR_ABORTED;
+        }
+    }
 }
 
 seos_err_t
@@ -96,8 +137,6 @@ SeosTlsApi_free(SeosTlsCtx* api)
 
     mbedtls_ssl_free(&api->mbedtls.ssl);
     mbedtls_ssl_config_free(&api->mbedtls.conf);
-    mbedtls_entropy_free(&api->mbedtls.entropy);
-    mbedtls_ctr_drbg_free(&api->mbedtls.drbg);
 
     return SEOS_SUCCESS;
 }

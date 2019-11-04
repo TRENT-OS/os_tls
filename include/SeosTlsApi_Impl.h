@@ -30,12 +30,8 @@ typedef struct
 
 typedef struct
 {
-    SeosTls_Callbacks nw;
-    void*             nwCtx;
     struct mbedtls
     {
-        mbedtls_entropy_context     entropy;
-        mbedtls_ctr_drbg_context    drbg;
         mbedtls_ssl_context         ssl;
         mbedtls_ssl_config          conf;
     } mbedtls;

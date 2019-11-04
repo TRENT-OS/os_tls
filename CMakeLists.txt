@@ -53,16 +53,23 @@ if (SEOS_TLS_IMPL_MBEDTLS)
         MBEDTLS_CONFIG_FILE="${CMAKE_CURRENT_SOURCE_DIR}/configs/MbedTLS_Config.h"
     )
     target_include_directories(${PROJECT_NAME}
+        # TODO: Should be made PRIVATE in the future, currently we need the
+        # includes from mbedTLS for their data structures
         PUBLIC
         "3rdParty/mbedtls/include"
     )
     target_sources(${PROJECT_NAME}
         PRIVATE
-#        "3rdParty/mbedtls/library/certs.c"
-#        "3rdParty/mbedtls/library/debug.c"
+        "3rdParty/mbedtls/library/asn1parse.c"
+        "3rdParty/mbedtls/library/certs.c"
+        "3rdParty/mbedtls/library/debug.c"
 #        "3rdParty/mbedtls/library/error.c"
 #        "3rdParty/mbedtls/library/net_sockets.c"
-#        "3rdParty/mbedtls/library/pkcs11.c"
+        "3rdParty/mbedtls/library/pk.c"
+        "3rdParty/mbedtls/library/pk_wrap.c"
+        "3rdParty/mbedtls/library/pkparse.c"
+        "3rdParty/mbedtls/library/oid.c"
+        "3rdParty/mbedtls/library/pkcs11.c"
 #        "3rdParty/mbedtls/library/ssl_cache.c"
         "3rdParty/mbedtls/library/ssl_ciphersuites.c"
         "3rdParty/mbedtls/library/ssl_cli.c"
@@ -72,22 +79,23 @@ if (SEOS_TLS_IMPL_MBEDTLS)
         "3rdParty/mbedtls/library/ssl_tls.c"
 #        "3rdParty/mbedtls/library/version.c"
 #        "3rdParty/mbedtls/library/version_features.c"
-#        "3rdParty/mbedtls/library/x509.c"
-#        "3rdParty/mbedtls/library/x509_create.c"
+        "3rdParty/mbedtls/library/x509.c"
+        "3rdParty/mbedtls/library/x509_create.c"
 #        "3rdParty/mbedtls/library/x509_crl.c"
-#        "3rdParty/mbedtls/library/x509_crt.c"
+        "3rdParty/mbedtls/library/x509_crt.c"
 #        "3rdParty/mbedtls/library/x509_csr.c"
 #        "3rdParty/mbedtls/library/x509write_crt.c"
 #        "3rdParty/mbedtls/library/x509write_csr.c"
-#        "3rdParty/mbedtls/library/aes.c"
-        "3rdParty/mbedtls/library/ccm.c"
-#        "3rdParty/mbedtls/library/cipher.c"
-#        "3rdParty/mbedtls/library/ctr_drbg.c"
+        "3rdParty/mbedtls/library/aes.c"
+        "3rdParty/mbedtls/library/gcm.c"
+        "3rdParty/mbedtls/library/cipher.c"
         "3rdParty/mbedtls/library/platform.c"
         "3rdParty/mbedtls/library/entropy.c"
         "3rdParty/mbedtls/library/entropy_poll.c"
         "3rdParty/mbedtls/library/md.c"
         "3rdParty/mbedtls/library/sha256.c"
+        "3rdParty/mbedtls/library/rsa.c"
+        "3rdParty/mbedtls/library/ecp.c"
     )
 endif()
 
