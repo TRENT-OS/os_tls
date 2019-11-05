@@ -19,6 +19,8 @@
 #include "compiler.h"
 #include "seos_err.h"
 
+#include <stdbool.h>
+
 typedef int (SeosTls_RecvFunc)(void* ctx, unsigned char* buf, size_t len);
 typedef int (SeosTls_SendFunc)(void* ctx, const unsigned char* buf, size_t len);
 
@@ -30,6 +32,7 @@ typedef struct
 
 typedef struct
 {
+    bool open;
     struct mbedtls
     {
         mbedtls_ssl_context         ssl;

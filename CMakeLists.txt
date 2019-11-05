@@ -86,16 +86,16 @@ if (SEOS_TLS_IMPL_MBEDTLS)
 #        "3rdParty/mbedtls/library/x509_csr.c"
 #        "3rdParty/mbedtls/library/x509write_crt.c"
 #        "3rdParty/mbedtls/library/x509write_csr.c"
-        "3rdParty/mbedtls/library/aes.c"
-        "3rdParty/mbedtls/library/gcm.c"
-        "3rdParty/mbedtls/library/cipher.c"
+#        "3rdParty/mbedtls/library/aes.c"
+#        "3rdParty/mbedtls/library/gcm.c"
+#        "3rdParty/mbedtls/library/cipher.c"
         "3rdParty/mbedtls/library/platform.c"
         "3rdParty/mbedtls/library/entropy.c"
         "3rdParty/mbedtls/library/entropy_poll.c"
-        "3rdParty/mbedtls/library/md.c"
-        "3rdParty/mbedtls/library/sha256.c"
-        "3rdParty/mbedtls/library/rsa.c"
-        "3rdParty/mbedtls/library/ecp.c"
+#        "3rdParty/mbedtls/library/md.c"
+#        "3rdParty/mbedtls/library/sha256.c"
+#        "3rdParty/mbedtls/library/rsa.c"
+#        "3rdParty/mbedtls/library/ecp.c"
     )
 endif()
 
