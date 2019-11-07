@@ -56,12 +56,12 @@ static int getRndBytes(void*            ctx,
 seos_err_t
 SeosTlsApi_init(SeosTlsCtx*                tlsCtx,
                 SeosCryptoCtx*             cryptoCtx,
-                const SeosTls_Callbacks*   cbFuncs,
-                void*                      cbCtx)
+                const SeosTls_Callbacks*   sockFuncs,
+                void*                      sockCtx)
 {
     int rc;
 
-    if (NULL == tlsCtx || NULL == cryptoCtx || NULL == cbFuncs)
+    if (NULL == tlsCtx || NULL == cryptoCtx || NULL == sockFuncs)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
@@ -97,8 +97,13 @@ SeosTlsApi_init(SeosTlsCtx*                tlsCtx,
         return SEOS_ERROR_ABORTED;
     }
 
-    mbedtls_ssl_set_bio(&tlsCtx->mbedtls.ssl, cbCtx, cbFuncs->send, cbFuncs->recv,
+    // Set the send/recv callbacks to work on the socket context
+    mbedtls_ssl_set_bio(&tlsCtx->mbedtls.ssl, sockCtx, sockFuncs->send,
+                        sockFuncs->recv,
                         NULL);
+
+    // Added to mbedTLS, to pass down the crypto context into the SSL context
+    mbedtls_ssl_set_crypto(&tlsCtx->mbedtls.ssl, cryptoCtx);
 
     return SEOS_SUCCESS;
 }
