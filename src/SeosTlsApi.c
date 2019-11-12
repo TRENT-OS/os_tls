@@ -91,19 +91,25 @@ SeosTlsApi_init(SeosTlsCtx*                tlsCtx,
 
     // Start session
     mbedtls_ssl_init(&tlsCtx->mbedtls.ssl);
+
+    // Added to mbedTLS, to pass down the crypto context into the SSL context;
+    //
+    // !!
+    // Attention: This has to happen before mbedtls_ssl_setup() is called, as
+    // the crypto context is already needed during setup so that it can be used
+    // in ssl_handshake_params_init() for the initialization of the digests.
+    // !!
+    mbedtls_ssl_set_crypto(&tlsCtx->mbedtls.ssl, cryptoCtx);
+
+    // Set the send/recv callbacks to work on the socket context
+    mbedtls_ssl_set_bio(&tlsCtx->mbedtls.ssl, sockCtx, sockFuncs->send,
+                        sockFuncs->recv, NULL);
+
     if ((rc = mbedtls_ssl_setup(&tlsCtx->mbedtls.ssl, &tlsCtx->mbedtls.conf)) != 0)
     {
         Debug_LOG_ERROR("mbedtls_ssl_setup() with code -0x%04x", -rc);
         return SEOS_ERROR_ABORTED;
     }
-
-    // Set the send/recv callbacks to work on the socket context
-    mbedtls_ssl_set_bio(&tlsCtx->mbedtls.ssl, sockCtx, sockFuncs->send,
-                        sockFuncs->recv,
-                        NULL);
-
-    // Added to mbedTLS, to pass down the crypto context into the SSL context
-    mbedtls_ssl_set_crypto(&tlsCtx->mbedtls.ssl, cryptoCtx);
 
     return SEOS_SUCCESS;
 }
