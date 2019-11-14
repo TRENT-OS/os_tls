@@ -22,11 +22,11 @@
 
 // Private static functions ----------------------------------------------------
 
-static void logDebug(void* ctx,
-                     int level,
-                     const char* file,
-                     int line,
-                     const char* str)
+static void logDebug(void*          ctx,
+                     int            level,
+                     const char*    file,
+                     int            line,
+                     const char*    str)
 {
     UNUSED_VAR(ctx);
     UNUSED_VAR(level);
@@ -35,11 +35,11 @@ static void logDebug(void* ctx,
     // where it is used - which is here. This is quite useless information.
     if (strlen(file) > 16)
     {
-        printf("[mbedTLS] ...%s:%04i: %s", file + (strlen(file) - 16), line, str );
+        printf("[...%s:%05i]: %s", file + (strlen(file) - 16), line, str);
     }
     else
     {
-        printf("[mbedTLS] %s:%04i: %s", file, line, str );
+        printf("[%s:%05i]: %s", file, line, str);
     }
 }
 
@@ -223,6 +223,7 @@ SeosTlsApi_read(SeosTlsCtx*     ctx,
     }
 
     Debug_LOG_ERROR("mbedtls_ssl_read() with code -0x%04x", -rc);
+
     return SEOS_ERROR_ABORTED;
 }
 
