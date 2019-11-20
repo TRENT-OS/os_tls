@@ -70,6 +70,8 @@ if (SEOS_TLS_IMPL_MBEDTLS)
         "3rdParty/mbedtls/library/ssl_cli.c"
         "3rdParty/mbedtls/library/ssl_tls.c"
         "3rdParty/mbedtls/library/x509.c"
+        "3rdParty/mbedtls/library/pem.c"
+        "3rdParty/mbedtls/library/base64.c"
         "3rdParty/mbedtls/library/x509_crt.c"
     )
 endif()
