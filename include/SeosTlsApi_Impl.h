@@ -4,7 +4,7 @@
  * @addtogroup API
  * @{
  *
- * @file SeosTls_Impl.h
+ * @file SeosTlsApi_Impl.h
  *
  * @brief SEOS TLS context and functions
  *
