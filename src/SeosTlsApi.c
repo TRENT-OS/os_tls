@@ -46,82 +46,104 @@ static int getRndBytes(void*            ctx,
                                      len) == SEOS_SUCCESS ? 0 : 1;
 }
 
-// Public functions ------------------------------------------------------------
-
-seos_err_t
-SeosTlsApi_init(SeosTlsCtx*                tlsCtx,
-                SeosCryptoCtx*             cryptoCtx,
-                const SeosTls_Callbacks*   sockFuncs,
-                void*                      sockCtx)
+static seos_err_t
+initImpl(SeosTlsCtx* ctx)
 {
     int rc;
 
-    if (NULL == tlsCtx || NULL == cryptoCtx || NULL == sockFuncs)
-    {
-        return SEOS_ERROR_INVALID_PARAMETER;
-    }
-
-    memset(tlsCtx, 0, sizeof(SeosTlsCtx));
-
-    // Set to the max
-    mbedtls_debug_set_threshold(100);
+    // Output levels: (0) none, (1) error, (2) + state change, (3) + informational
+    mbedtls_debug_set_threshold((ctx->cfg.flags & SeosTls_Flags_DEBUG) ? 3 : 0);
 
     // Setup config
-    mbedtls_ssl_config_init(&tlsCtx->mbedtls.conf);
-    if ((rc = mbedtls_ssl_config_defaults(&tlsCtx->mbedtls.conf,
+    mbedtls_ssl_config_init(&ctx->mbedtls.conf);
+    if ((rc = mbedtls_ssl_config_defaults(&ctx->mbedtls.conf,
                                           MBEDTLS_SSL_IS_CLIENT,
                                           MBEDTLS_SSL_TRANSPORT_STREAM,
                                           MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
     {
-        Debug_LOG_ERROR("mbedtls_ssl_config_defaults() with code -0x%04x", -rc);
-        return SEOS_ERROR_ABORTED;
+        Debug_LOG_ERROR("mbedtls_ssl_config_defaults() with code 0x%04x", rc);
+        goto err0;
     }
-    mbedtls_ssl_conf_dbg(&tlsCtx->mbedtls.conf, logDebug, NULL);
-    mbedtls_ssl_conf_rng(&tlsCtx->mbedtls.conf, getRndBytes, cryptoCtx);
 
-    // -------------------------------------------------------------------------
-    // Todo: This should not stay in production code!!!
-    mbedtls_ssl_conf_authmode(&tlsCtx->mbedtls.conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
-    // -------------------------------------------------------------------------
+    // If we have debug, use internal logging function
+    mbedtls_ssl_conf_dbg(&ctx->mbedtls.conf, logDebug, NULL);
 
-    // Start session
-    mbedtls_ssl_init(&tlsCtx->mbedtls.ssl);
+    // Use SeosCryptoRng for TLS
+    mbedtls_ssl_conf_rng(&ctx->mbedtls.conf, getRndBytes, ctx->cfg.crypto.context);
 
-    // Added to mbedTLS, to pass down the crypto context into the SSL context;
-    //
-    // !!
+    if (ctx->cfg.flags & SeosTls_Flags_NO_VERIFY)
+    {
+        // We need to have the option to disable cert verification, even though it
+        // is not advisable
+        Debug_LOG_INFO("TLS certificate verification is disabled, this is NOT secure!");
+        mbedtls_ssl_conf_authmode(&ctx->mbedtls.conf, MBEDTLS_SSL_VERIFY_NONE);
+    }
+    else
+    {
+        mbedtls_x509_crt_init(&ctx->mbedtls.cert);
+        // We can feed here several PEM-encoded certificates; the function will
+        // return the amount of correctly parsed certs..
+        if ((rc = mbedtls_x509_crt_parse(&ctx->mbedtls.cert,
+                                         (const unsigned char*)ctx->cfg.ca.cert,
+                                         strlen(ctx->cfg.ca.cert) + 1)) != 0)
+        {
+            Debug_LOG_ERROR("mbedtls_x509_crt_parse() with code 0x%04x", rc);
+            goto err1;
+        }
+        mbedtls_ssl_conf_ca_chain(&ctx->mbedtls.conf, &ctx->mbedtls.cert, NULL);
+        mbedtls_ssl_conf_authmode(&ctx->mbedtls.conf, MBEDTLS_SSL_VERIFY_REQUIRED);
+    }
+
+    mbedtls_ssl_init(&ctx->mbedtls.ssl);
+
     // Attention: This has to happen before mbedtls_ssl_setup() is called, as
     // the crypto context is already needed during setup so that it can be used
     // in ssl_handshake_params_init() for the initialization of the digests.
-    // !!
-    mbedtls_ssl_set_crypto(&tlsCtx->mbedtls.ssl, cryptoCtx);
+    mbedtls_ssl_set_crypto(&ctx->mbedtls.ssl, ctx->cfg.crypto.context);
 
     // Set the send/recv callbacks to work on the socket context
-    mbedtls_ssl_set_bio(&tlsCtx->mbedtls.ssl, sockCtx, sockFuncs->send,
-                        sockFuncs->recv, NULL);
+    mbedtls_ssl_set_bio(&ctx->mbedtls.ssl, ctx->cfg.socket.context,
+                        ctx->cfg.socket.send,
+                        ctx->cfg.socket.recv, NULL);
 
-    if ((rc = mbedtls_ssl_setup(&tlsCtx->mbedtls.ssl, &tlsCtx->mbedtls.conf)) != 0)
+    if ((rc = mbedtls_ssl_setup(&ctx->mbedtls.ssl, &ctx->mbedtls.conf)) != 0)
     {
-        Debug_LOG_ERROR("mbedtls_ssl_setup() with code -0x%04x", -rc);
-        return SEOS_ERROR_ABORTED;
+        Debug_LOG_ERROR("mbedtls_ssl_setup() with code 0x%04x", rc);
+        goto err2;
     }
+
+    return SEOS_SUCCESS;
+
+err2:
+    mbedtls_ssl_free(&ctx->mbedtls.ssl);
+err1:
+    if (!(ctx->cfg.flags & SeosTls_Flags_NO_VERIFY))
+    {
+        mbedtls_x509_crt_free(&ctx->mbedtls.cert);
+    }
+err0:
+    mbedtls_ssl_config_free(&ctx->mbedtls.conf);
+
+    return SEOS_ERROR_ABORTED;
+}
+
+static seos_err_t
+freeImpl(SeosTlsCtx* ctx)
+{
+    mbedtls_ssl_free(&ctx->mbedtls.ssl);
+    if (!(ctx->cfg.flags & SeosTls_Flags_NO_VERIFY))
+    {
+        mbedtls_x509_crt_free(&ctx->mbedtls.cert);
+    }
+    mbedtls_ssl_config_free(&ctx->mbedtls.conf);
 
     return SEOS_SUCCESS;
 }
 
-seos_err_t
-SeosTlsApi_handshake(SeosTlsCtx* ctx)
+static seos_err_t
+handshakeImpl(SeosTlsCtx* ctx)
 {
     int rc;
-
-    if (NULL == ctx)
-    {
-        return SEOS_ERROR_INVALID_PARAMETER;
-    }
-    else if (ctx->open)
-    {
-        return SEOS_ERROR_OPERATION_DENIED;
-    }
 
     while (true)
     {
@@ -148,33 +170,24 @@ SeosTlsApi_handshake(SeosTlsCtx* ctx)
     }
 }
 
-seos_err_t
-SeosTlsApi_write(SeosTlsCtx*    ctx,
-                 const void*    data,
-                 const size_t   dataSize)
+static seos_err_t
+writeImpl(SeosTlsCtx*    ctx,
+          const void*    data,
+          const size_t   dataSize)
 {
-    int written, to_write, offs;
-
-    if (NULL == ctx || NULL == data)
-    {
-        return SEOS_ERROR_INVALID_PARAMETER;
-    }
-    else if (!ctx->open)
-    {
-        return SEOS_ERROR_OPERATION_DENIED;
-    }
+    int rc;
+    size_t written, to_write, offs;
 
     to_write = dataSize;
     offs     = 0;
-
     while (to_write > 0)
     {
-        if ((written = mbedtls_ssl_write(&ctx->mbedtls.ssl, data + offs,
-                                         to_write)) <= 0)
+        if ((rc = mbedtls_ssl_write(&ctx->mbedtls.ssl, data + offs, to_write)) <= 0)
         {
-            Debug_LOG_ERROR("mbedtls_ssl_write() with code -0x%04x", -written);
+            Debug_LOG_ERROR("mbedtls_ssl_write() with code 0x%04x", rc);
             return SEOS_ERROR_ABORTED;
         }
+        written  = rc;
         // Handle cases where we write only parts
         to_write = to_write - written;
         offs     = offs     + written;
@@ -183,21 +196,12 @@ SeosTlsApi_write(SeosTlsCtx*    ctx,
     return SEOS_SUCCESS;
 }
 
-seos_err_t
-SeosTlsApi_read(SeosTlsCtx*     ctx,
-                void*           data,
-                size_t*         dataSize)
+static seos_err_t
+readImpl(SeosTlsCtx*     ctx,
+         void*           data,
+         size_t*         dataSize)
 {
     int rc;
-
-    if (NULL == ctx || NULL == data || NULL == dataSize)
-    {
-        return SEOS_ERROR_INVALID_PARAMETER;
-    }
-    else if (!ctx->open)
-    {
-        return SEOS_ERROR_OPERATION_DENIED;
-    }
 
     rc = mbedtls_ssl_read(&ctx->mbedtls.ssl, data, *dataSize);
     if (rc > 0)
@@ -217,9 +221,92 @@ SeosTlsApi_read(SeosTlsCtx*     ctx,
         return SEOS_SUCCESS;
     }
 
-    Debug_LOG_ERROR("mbedtls_ssl_read() with code -0x%04x", -rc);
+    Debug_LOG_ERROR("mbedtls_ssl_read() with code 0x%04x", rc);
 
     return SEOS_ERROR_ABORTED;
+}
+
+// Public functions ------------------------------------------------------------
+
+seos_err_t
+SeosTlsApi_init(SeosTlsCtx*           ctx,
+                const SeosTls_Config* cfg)
+{
+    if (NULL == ctx || NULL == cfg)
+    {
+        return SEOS_ERROR_INVALID_PARAMETER;
+    }
+    else if (NULL == cfg->crypto.context)
+    {
+        Debug_LOG_ERROR("Crypto context is NULL");
+        return SEOS_ERROR_INVALID_PARAMETER;
+    }
+    else if (NULL == cfg->socket.recv || NULL == cfg->socket.send)
+    {
+        Debug_LOG_ERROR("Socket callbacks for send/recv are not set");
+        return SEOS_ERROR_INVALID_PARAMETER;
+    }
+    else if (!(cfg->flags & SeosTls_Flags_NO_VERIFY) &&
+             (strstr(cfg->ca.cert, "-----BEGIN CERTIFICATE-----") == NULL ||
+              strstr(cfg->ca.cert, "-----END CERTIFICATE-----") == NULL) )
+    {
+        Debug_LOG_ERROR("Presented CA cert is not valid (maybe not PEM encoded?)");
+        return SEOS_ERROR_INVALID_PARAMETER;
+    }
+
+    memset(ctx, 0, sizeof(SeosTlsCtx));
+    memcpy(&ctx->cfg, cfg, sizeof(SeosTls_Config));
+
+    return initImpl(ctx);
+}
+
+seos_err_t
+SeosTlsApi_handshake(SeosTlsCtx* ctx)
+{
+    if (NULL == ctx)
+    {
+        return SEOS_ERROR_INVALID_PARAMETER;
+    }
+    else if (ctx->open)
+    {
+        return SEOS_ERROR_OPERATION_DENIED;
+    }
+
+    return handshakeImpl(ctx);
+}
+
+seos_err_t
+SeosTlsApi_write(SeosTlsCtx*    ctx,
+                 const void*    data,
+                 const size_t   dataSize)
+{
+    if (NULL == ctx || NULL == data)
+    {
+        return SEOS_ERROR_INVALID_PARAMETER;
+    }
+    else if (!ctx->open)
+    {
+        return SEOS_ERROR_OPERATION_DENIED;
+    }
+
+    return writeImpl(ctx, data, dataSize);
+}
+
+seos_err_t
+SeosTlsApi_read(SeosTlsCtx*     ctx,
+                void*           data,
+                size_t*         dataSize)
+{
+    if (NULL == ctx || NULL == data || NULL == dataSize)
+    {
+        return SEOS_ERROR_INVALID_PARAMETER;
+    }
+    else if (!ctx->open)
+    {
+        return SEOS_ERROR_OPERATION_DENIED;
+    }
+
+    return readImpl(ctx, data, dataSize);
 }
 
 seos_err_t
@@ -230,9 +317,5 @@ SeosTlsApi_free(SeosTlsCtx* ctx)
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    mbedtls_ssl_free(&ctx->mbedtls.ssl);
-    mbedtls_ssl_config_free(&ctx->mbedtls.conf);
-
-    return SEOS_SUCCESS;
+    return freeImpl(ctx);
 }
-
