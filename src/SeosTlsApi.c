@@ -47,14 +47,175 @@ static int getRndBytes(void*            ctx,
 }
 
 static seos_err_t
+derivePolicy(const SeosTls_Config* cfg,
+             SeosTls_Policy* policy)
+{
+    size_t i;
+
+    memset(policy, 0x00, sizeof(SeosTls_Policy));
+    policy->dhMinBits  = 9999;
+    policy->rsaMinBits = 9999;
+
+#   define MIN(a,b) ((a) < (b) ? (a) : (b))
+
+    // Here we go through the ciphersuites given and derive appropriate security
+    // parameters. The result will be the based on the WEAKEST ciphersuite given
+    // by the user -- think a moment, this DOES make sense.
+    for (i = 0; i < cfg->crypto.cipherSuitesLen; i++)
+    {
+        switch (cfg->crypto.cipherSuites[i])
+        {
+        // Careful, this is a FALLTHROUGH!
+        case SeosTls_CipherSuite_DHE_RSA_WITH_AES_128_GCM_SHA256:
+            policy->dhMinBits   = MIN(policy->dhMinBits,  2048);
+        case SeosTls_CipherSuite_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
+            policy->rsaMinBits  = MIN(policy->rsaMinBits, 2048);
+            policy->signatureDigests[policy->signatureDigestsLen++] = SeosTls_Digest_SHA256;
+            policy->sessionDigests[policy->sessionDigestsLen++]     = SeosTls_Digest_SHA256;
+            break;
+        default:
+            return SEOS_ERROR_NOT_SUPPORTED;
+        }
+    }
+
+#   undef MIN
+
+    return SEOS_SUCCESS;
+}
+
+static seos_err_t
+checkSuites(const SeosTls_CipherSuite*  suites,
+            const size_t                numSuites)
+{
+    size_t i;
+
+    if (numSuites < 0 || numSuites > SeosTls_MAX_CIPHERSUITES)
+    {
+        return SEOS_ERROR_INVALID_PARAMETER;
+    }
+
+    for (i = 0; i < numSuites; i++)
+    {
+        switch (suites[i])
+        {
+        case SeosTls_CipherSuite_DHE_RSA_WITH_AES_128_GCM_SHA256:
+        case SeosTls_CipherSuite_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
+            break;
+        default:
+            return SEOS_ERROR_NOT_SUPPORTED;
+        }
+    }
+
+    return SEOS_SUCCESS;
+}
+
+static seos_err_t
+validatePolicy(const SeosTls_Config* cfg,
+               const SeosTls_Policy* policy)
+{
+    size_t i;
+    bool checkDH, checkRSA;
+
+    if (policy->sessionDigestsLen < 0
+        || policy->sessionDigestsLen > SeosTls_MAX_DIGESTS ||
+        policy->signatureDigestsLen < 0
+        || policy->signatureDigestsLen > SeosTls_MAX_DIGESTS )
+    {
+        return SEOS_ERROR_INVALID_PARAMETER;
+    }
+
+    // Check the session digests and signature digests
+    for (i = 0; i < SeosTls_MAX_DIGESTS; i++)
+    {
+        if (i < policy->sessionDigestsLen)
+        {
+            switch (policy->sessionDigests[i])
+            {
+            case SeosTls_Digest_SHA256:
+                break;
+            default:
+                return SEOS_ERROR_NOT_SUPPORTED;
+            }
+        }
+        if (i < policy->signatureDigestsLen)
+        {
+            switch (policy->signatureDigests[i])
+            {
+            case SeosTls_Digest_SHA256:
+                break;
+            default:
+                return SEOS_ERROR_NOT_SUPPORTED;
+            }
+        }
+    }
+
+    // We need to validate that the policy chosen does actually work with the
+    // crypto library. Only validate those params that are actually relevant
+    // for the selected ciphersuites...
+    checkDH = false;
+    checkRSA = false;
+    for (i = 0; i < cfg->crypto.cipherSuitesLen; i++)
+    {
+        switch (cfg->crypto.cipherSuites[i])
+        {
+        case SeosTls_CipherSuite_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
+            checkRSA = true;
+            break;
+        case SeosTls_CipherSuite_DHE_RSA_WITH_AES_128_GCM_SHA256:
+            checkRSA = true;
+            checkDH  = true;
+            break;
+        default:
+            return SEOS_ERROR_NOT_SUPPORTED;
+        }
+    }
+
+    if (checkRSA && ((policy->rsaMinBits > (SeosCryptoKey_Size_RSA_MAX * 8)) ||
+                     (policy->rsaMinBits < (SeosCryptoKey_Size_RSA_MIN * 8))))
+    {
+        return SEOS_ERROR_NOT_SUPPORTED;
+    }
+    if (checkDH && ((policy->dhMinBits > (SeosCryptoKey_Size_DH_MAX * 8)) ||
+                    (policy->dhMinBits < (SeosCryptoKey_Size_DH_MIN * 8))))
+    {
+        return SEOS_ERROR_NOT_SUPPORTED;
+    }
+
+    return SEOS_SUCCESS;
+}
+
+static void
+setCertProfile(const SeosTls_Policy*         policy,
+               mbedtls_x509_crt_profile*     profile)
+{
+    size_t i;
+
+    // Currently, we only support RSA signatures with a given length
+    profile->allowed_pks    = MBEDTLS_X509_ID_FLAG(MBEDTLS_PK_RSA);
+    profile->rsa_min_bitlen = policy->rsaMinBits;
+
+    // Set the digest based on what is given (right now, only SHA256)
+    profile->allowed_mds = 0;
+    for (i = 0; i < policy->signatureDigestsLen; i++)
+    {
+        switch (policy->signatureDigests[i])
+        {
+        case SeosTls_Digest_SHA256:
+            profile->allowed_mds |= MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA256 );
+            break;
+        default:
+            Debug_LOG_ERROR("Signature digest %02x is not supported",
+                            policy->signatureDigests[i]);
+        }
+    }
+}
+
+static seos_err_t
 initImpl(SeosTlsCtx* ctx)
 {
     int rc;
 
-    // Output levels: (0) none, (1) error, (2) + state change, (3) + informational
-    mbedtls_debug_set_threshold((ctx->cfg.flags & SeosTls_Flags_DEBUG) ? 3 : 0);
-
-    // Setup config
+    // Apply default configuration first, the override parts of it..
     mbedtls_ssl_config_init(&ctx->mbedtls.conf);
     if ((rc = mbedtls_ssl_config_defaults(&ctx->mbedtls.conf,
                                           MBEDTLS_SSL_IS_CLIENT,
@@ -64,6 +225,23 @@ initImpl(SeosTlsCtx* ctx)
         Debug_LOG_ERROR("mbedtls_ssl_config_defaults() with code 0x%04x", rc);
         goto err0;
     }
+
+    // Which ciphersuites are allowed? This heavily depends on the state of the
+    // modified mbedTLS and cannot simply be changed!!
+    mbedtls_ssl_conf_ciphersuites(&ctx->mbedtls.conf,
+                                  (int*) ctx->cfg.crypto.cipherSuites);
+
+    // Which hashes do we allow for server signatures?
+    mbedtls_ssl_conf_sig_hashes(&ctx->mbedtls.conf,
+                                (int*) ctx->policy.signatureDigests);
+
+    // Which certs do we accept (hashes, rsa bitlen)
+    setCertProfile(&ctx->policy, &ctx->mbedtls.certProfile);
+    mbedtls_ssl_conf_cert_profile(&ctx->mbedtls.conf, &ctx->mbedtls.certProfile);
+
+    // What is the minimum bitlen we allow for DH-based key exchanges?
+    mbedtls_ssl_conf_dhm_min_bitlen(&ctx->mbedtls.conf,
+                                    ctx->policy.dhMinBits);
 
     // If we have debug, use internal logging function
     mbedtls_ssl_conf_dbg(&ctx->mbedtls.conf, logDebug, NULL);
@@ -81,11 +259,9 @@ initImpl(SeosTlsCtx* ctx)
     else
     {
         mbedtls_x509_crt_init(&ctx->mbedtls.cert);
-        // We can feed here several PEM-encoded certificates; the function will
-        // return the amount of correctly parsed certs..
         if ((rc = mbedtls_x509_crt_parse(&ctx->mbedtls.cert,
-                                         (const unsigned char*)ctx->cfg.ca.cert,
-                                         strlen(ctx->cfg.ca.cert) + 1)) != 0)
+                                         (const unsigned char*)ctx->cfg.crypto.caCert,
+                                         strlen(ctx->cfg.crypto.caCert) + 1)) != 0)
         {
             Debug_LOG_ERROR("mbedtls_x509_crt_parse() with code 0x%04x", rc);
             goto err1;
@@ -93,6 +269,9 @@ initImpl(SeosTlsCtx* ctx)
         mbedtls_ssl_conf_ca_chain(&ctx->mbedtls.conf, &ctx->mbedtls.cert, NULL);
         mbedtls_ssl_conf_authmode(&ctx->mbedtls.conf, MBEDTLS_SSL_VERIFY_REQUIRED);
     }
+
+    // Output levels: (0) none, (1) error, (2) + state change, (3) + informational
+    mbedtls_debug_set_threshold((ctx->cfg.flags & SeosTls_Flags_DEBUG) ? 3 : 0);
 
     mbedtls_ssl_init(&ctx->mbedtls.ssl);
 
@@ -229,9 +408,12 @@ readImpl(SeosTlsCtx*     ctx,
 // Public functions ------------------------------------------------------------
 
 seos_err_t
-SeosTlsApi_init(SeosTlsCtx*           ctx,
-                const SeosTls_Config* cfg)
+SeosTlsApi_init(SeosTlsCtx*              ctx,
+                const SeosTls_Config*    cfg,
+                const SeosTls_Policy*    policy)
 {
+    seos_err_t err;
+
     if (NULL == ctx || NULL == cfg)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
@@ -241,14 +423,20 @@ SeosTlsApi_init(SeosTlsCtx*           ctx,
         Debug_LOG_ERROR("Crypto context is NULL");
         return SEOS_ERROR_INVALID_PARAMETER;
     }
+    else if (checkSuites(cfg->crypto.cipherSuites,
+                         cfg->crypto.cipherSuitesLen) != SEOS_SUCCESS)
+    {
+        Debug_LOG_ERROR("Invalid selection of ciphersuites or too many ciphersuites given");
+        return SEOS_ERROR_INVALID_PARAMETER;
+    }
     else if (NULL == cfg->socket.recv || NULL == cfg->socket.send)
     {
         Debug_LOG_ERROR("Socket callbacks for send/recv are not set");
         return SEOS_ERROR_INVALID_PARAMETER;
     }
     else if (!(cfg->flags & SeosTls_Flags_NO_VERIFY) &&
-             (strstr(cfg->ca.cert, "-----BEGIN CERTIFICATE-----") == NULL ||
-              strstr(cfg->ca.cert, "-----END CERTIFICATE-----") == NULL) )
+             (strstr(cfg->crypto.caCert, "-----BEGIN CERTIFICATE-----") == NULL ||
+              strstr(cfg->crypto.caCert, "-----END CERTIFICATE-----") == NULL) )
     {
         Debug_LOG_ERROR("Presented CA cert is not valid (maybe not PEM encoded?)");
         return SEOS_ERROR_INVALID_PARAMETER;
@@ -256,6 +444,29 @@ SeosTlsApi_init(SeosTlsCtx*           ctx,
 
     memset(ctx, 0, sizeof(SeosTlsCtx));
     memcpy(&ctx->cfg, cfg, sizeof(SeosTls_Config));
+    if (NULL == policy)
+    {
+        // If no policy is given, derive all the policy parameters based on the
+        // WEAKEST ciphersuite given by the user.
+        derivePolicy(&ctx->cfg, &ctx->policy);
+        Debug_LOG_INFO("Derived policy with %i/%i digests and rsaMinBits=%i, dhMinBits=%i",
+                       ctx->policy.sessionDigestsLen, ctx->policy.signatureDigestsLen,
+                       ctx->policy.rsaMinBits, ctx->policy.dhMinBits);
+    }
+    else
+    {
+        memcpy(&ctx->policy, policy, sizeof(SeosTls_Policy));
+    }
+
+    if ((err = validatePolicy(&ctx->cfg, &ctx->policy)) != SEOS_SUCCESS)
+    {
+        Debug_LOG_ERROR("Policy is not valid");
+        return err;
+    }
+
+    // These two need to be zero-terminated so they can be passed to mbedTLS!
+    ctx->cfg.crypto.cipherSuites[ctx->cfg.crypto.cipherSuitesLen] = 0;
+    ctx->policy.signatureDigests[ctx->policy.signatureDigestsLen] = 0;
 
     return initImpl(ctx);
 }
