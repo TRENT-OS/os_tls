@@ -185,17 +185,28 @@ validatePolicy(const SeosTls_Config* cfg,
 }
 
 static void
-setCertProfile(const SeosTls_Policy*         policy,
-               mbedtls_x509_crt_profile*     profile)
+setCertProfile(const SeosTls_Policy*        policy,
+               const SeosTls_CipherSuite*   suites,
+               const size_t                 suitesLen,
+               mbedtls_x509_crt_profile*    profile)
 {
     size_t i;
 
-    // Currently, we only support RSA signatures with a given length
-    profile->allowed_pks    = MBEDTLS_X509_ID_FLAG(MBEDTLS_PK_RSA);
-    profile->rsa_min_bitlen = policy->rsaMinBits;
+    memset(profile, 0, sizeof(mbedtls_x509_crt_profile));
 
-    // Set the digest based on what is given (right now, only SHA256)
-    profile->allowed_mds = 0;
+    for (i = 0; i < suitesLen; i++)
+    {
+        switch (suites[i])
+        {
+        case SeosTls_CipherSuite_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
+        case SeosTls_CipherSuite_DHE_RSA_WITH_AES_128_GCM_SHA256:
+            profile->allowed_pks |= MBEDTLS_X509_ID_FLAG(MBEDTLS_PK_RSA);
+            break;
+        default:
+            Debug_LOG_ERROR("Ciphersuite %04x is not supported", suites[i]);
+        }
+    }
+
     for (i = 0; i < policy->signatureDigestsLen; i++)
     {
         switch (policy->signatureDigests[i])
@@ -208,6 +219,8 @@ setCertProfile(const SeosTls_Policy*         policy,
                             policy->signatureDigests[i]);
         }
     }
+
+    profile->rsa_min_bitlen = policy->rsaMinBits;
 }
 
 static seos_err_t
@@ -236,7 +249,8 @@ initImpl(SeosTlsCtx* ctx)
                                 (int*) ctx->policy.signatureDigests);
 
     // Which certs do we accept (hashes, rsa bitlen)
-    setCertProfile(&ctx->policy, &ctx->mbedtls.certProfile);
+    setCertProfile(&ctx->policy, ctx->cfg.crypto.cipherSuites,
+                   ctx->cfg.crypto.cipherSuitesLen, &ctx->mbedtls.certProfile);
     mbedtls_ssl_conf_cert_profile(&ctx->mbedtls.conf, &ctx->mbedtls.certProfile);
 
     // What is the minimum bitlen we allow for DH-based key exchanges?
