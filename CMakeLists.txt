@@ -60,6 +60,8 @@ if (SEOS_TLS_IMPL_MBEDTLS)
     )
     target_sources(${PROJECT_NAME}
         PRIVATE
+        # This file includes the functions we have added
+        "3rdParty/mbedtls/library/seos.c"
         # Include the minimum of C files which we need here which are not already
         # compiled in as part of the crypto API
         "3rdParty/mbedtls/library/debug.c"
