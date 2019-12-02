@@ -15,7 +15,10 @@ seos_err_t
 SeosTlsRpcServer_init(SeosTlsRpcServer_Context*         ctx,
                       const SeosTlsRpcServer_Config*    cfg)
 {
-    printf("%s\n", __func__);
+    if (NULL == ctx || NULL == cfg)
+    {
+        return SEOS_ERROR_INVALID_PARAMETER;
+    }
 
     memset(ctx, 0, sizeof(SeosTlsRpcServer_Context));
     ctx->dataport = cfg->dataport;
@@ -27,7 +30,10 @@ SeosTlsRpcServer_init(SeosTlsRpcServer_Context*         ctx,
 seos_err_t
 SeosTlsRpcServer_free(SeosTlsRpcServer_Context* ctx)
 {
-    printf("%s\n", __func__);
+    if (NULL == ctx)
+    {
+        return SEOS_ERROR_INVALID_PARAMETER;
+    }
 
     return SeosTls_free(&ctx->library);
 }
@@ -46,8 +52,6 @@ SeosTlsRpcServer_free(SeosTlsRpcServer_Context* ctx)
 seos_err_t
 SeosTlsRpcServer_handshake(SeosTlsRpcServer_Handle handle)
 {
-    printf("%s\n", __func__);
-
     SeosTlsRpcServer_Context* ctx = &handle->context.server;
     if (handle->mode != SeosTls_Mode_AS_RPC_SERVER)
     {
@@ -61,8 +65,6 @@ seos_err_t
 SeosTlsRpcServer_write(SeosTlsRpcServer_Handle      handle,
                        size_t                       dataSize)
 {
-    printf("%s\n", __func__);
-
     SeosTlsRpcServer_Context* ctx = &handle->context.server;
     if (handle->mode != SeosTls_Mode_AS_RPC_SERVER)
     {
@@ -76,8 +78,6 @@ seos_err_t
 SeosTlsRpcServer_read(SeosTlsRpcServer_Handle       handle,
                       size_t*                       dataSize)
 {
-    printf("%s\n", __func__);
-
     SeosTlsRpcServer_Context* ctx = &handle->context.server;
     if (handle->mode != SeosTls_Mode_AS_RPC_SERVER)
     {

@@ -15,8 +15,6 @@ seos_err_t
 SeosTlsRpcClient_init(SeosTlsRpcClient_Context*         ctx,
                       const SeosTlsRpcClient_Config*    cfg)
 {
-    printf("%s\n", __func__);
-
     if (NULL == ctx || NULL == cfg || NULL == cfg->dataport || NULL == cfg->handle)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
@@ -32,11 +30,9 @@ SeosTlsRpcClient_init(SeosTlsRpcClient_Context*         ctx,
 seos_err_t
 SeosTlsRpcClient_free(SeosTlsRpcClient_Context*         ctx)
 {
-    printf("%s\n", __func__);
-
     UNUSED_VAR(ctx);
 
-    return SEOS_ERROR_NOT_SUPPORTED;
+    return SEOS_SUCCESS;
 }
 
 // RPC functions ---------------------------------------------------------------
@@ -44,7 +40,10 @@ SeosTlsRpcClient_free(SeosTlsRpcClient_Context*         ctx)
 seos_err_t
 SeosTlsRpcClient_handshake(SeosTlsRpcClient_Context*    ctx)
 {
-    printf("%s\n", __func__);
+    if (NULL == ctx)
+    {
+        return SEOS_ERROR_INVALID_PARAMETER;
+    }
 
     return SeosTlsRpcServer_handshake(ctx->handle);
 }
@@ -54,8 +53,6 @@ SeosTlsRpcClient_write(SeosTlsRpcClient_Context*    ctx,
                        const void*                  data,
                        const size_t                 dataSize)
 {
-    printf("%s\n", __func__);
-
     if (NULL == ctx || NULL == data)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
@@ -75,8 +72,6 @@ SeosTlsRpcClient_read(SeosTlsRpcClient_Context* ctx,
                       void*                     data,
                       size_t*                   dataSize)
 {
-    printf("%s\n", __func__);
-
     seos_err_t rc;
 
     if (NULL == ctx || NULL == data || NULL == dataSize)
