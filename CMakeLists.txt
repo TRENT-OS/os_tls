@@ -5,6 +5,9 @@ project(seos_tls C)
 add_library(
     ${PROJECT_NAME} STATIC
     "src/SeosTlsApi.c"
+    "src/SeosTls.c"
+    "src/SeosTlsRpcClient.c"
+    "src/SeosTlsRpcServer.c"
 )
 if (ENABLE_LINT)
         set(CMAKE_C_CPPCHECK "cppcheck;--enable=warning;--inline-suppr")
