@@ -19,9 +19,6 @@ SeosTlsLib_init(SeosTlsLib_Context*         ctx,
                 const SeosTlsLib_Config*    cfg);
 
 seos_err_t
-SeosTlsLib_free(SeosTlsLib_Context*         ctx);
-
-seos_err_t
 SeosTlsLib_handshake(SeosTlsLib_Context*    ctx);
 
 seos_err_t
@@ -33,5 +30,8 @@ seos_err_t
 SeosTlsLib_read(SeosTlsLib_Context*         ctx,
                 void*                       data,
                 size_t*                     dataSize);
+
+seos_err_t
+SeosTlsLib_free(SeosTlsLib_Context*         ctx);
 
 /** @} */
