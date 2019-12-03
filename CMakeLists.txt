@@ -39,18 +39,6 @@ else()
     )
 endif(NO_KERNEL_BUILD)
 
-if (DEBUG_CONFIG_H_FILE)
-    list(APPEND PUBLIC_TARGET_COMPILE_DEFINITIONS
-        "DEBUG_CONFIG_H_FILE=${DEBUG_CONFIG_H_FILE}"
-    )
-endif()
-
-if (MEMORY_CONFIG_H_FILE)
-    list(APPEND PUBLIC_TARGET_COMPILE_DEFINITIONS
-        "MEMORY_CONFIG_H_FILE=${MEMORY_CONFIG_H_FILE}"
-    )
-endif()
-
 if (SEOS_TLS_IMPL_MBEDTLS)
     list(APPEND PRIVATE_TARGET_COMPILE_DEFINITIONS
         MBEDTLS_CONFIG_FILE="${CMAKE_CURRENT_SOURCE_DIR}/configs/MbedTLS_Config.h"
@@ -95,8 +83,8 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     seos_core_api
-    seos_crypto
     seos_libs
+    seos_crypto
 )
 
 # if invoked from the SOES sandbox, provide a documentation build target
