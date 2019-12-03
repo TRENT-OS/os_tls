@@ -20,53 +20,59 @@ static void logDebug(void*          ctx,
                      int            line,
                      const char*    str)
 {
+    char msg[256];
     UNUSED_VAR(ctx);
     UNUSED_VAR(level);
 
-    // we can't call Debug_LOG_DEBUG() because this will print file and line
-    // where it is used - which is here. This is quite useless information.
     if (strlen(file) > 16)
     {
-        printf("[...%s:%05i]: %s", file + (strlen(file) - 16), line, str);
+        snprintf(msg, sizeof(msg), "[...%s:%05i]: %s", file + (strlen(file) - 16), line,
+                 str);
     }
     else
     {
-        printf("[%s:%05i]: %s", file, line, str);
+        snprintf(msg, sizeof(msg), "[%s:%05i]: %s", file, line, str);
     }
+
+    Debug_PRINTF("%s", msg);
 }
 
-static int getRndBytes(void*            ctx,
-                       unsigned char*   buf,
-                       size_t           len)
+static int
+getRndBytes(void*            ctx,
+            unsigned char*   buf,
+            size_t           len)
 {
     return SeosCryptoApi_rngGetBytes(ctx, 0, (void*) buf,
                                      len) == SEOS_SUCCESS ? 0 : 1;
+}
+
+static inline size_t
+getMinOf(size_t a,
+         size_t b)
+{
+    return (a < b) ? a : b;
 }
 
 static seos_err_t
 derivePolicy(const SeosTlsLib_Config*      cfg,
              SeosTlsLib_Policy*            policy)
 {
-    size_t i;
-
     memset(policy, 0, sizeof(SeosTlsLib_Policy));
     policy->dhMinBits  = 9999;
     policy->rsaMinBits = 9999;
 
-#   define MIN(a,b) ((a) < (b) ? (a) : (b))
-
     // Here we go through the ciphersuites given and derive appropriate security
     // parameters. The result will be the based on the WEAKEST ciphersuite given
     // by the user -- think a moment, this DOES make sense.
-    for (i = 0; i < cfg->crypto.cipherSuitesLen; i++)
+    for (size_t i = 0; i < cfg->crypto.cipherSuitesLen; i++)
     {
         switch (cfg->crypto.cipherSuites[i])
         {
         // Careful, this is a FALLTHROUGH!
         case SeosTlsLib_CipherSuite_DHE_RSA_WITH_AES_128_GCM_SHA256:
-            policy->dhMinBits   = MIN(policy->dhMinBits,  2048);
+            policy->dhMinBits   = getMinOf(policy->dhMinBits,  2048);
         case SeosTlsLib_CipherSuite_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
-            policy->rsaMinBits  = MIN(policy->rsaMinBits, 2048);
+            policy->rsaMinBits  = getMinOf(policy->rsaMinBits, 2048);
             policy->signatureDigests[policy->signatureDigestsLen++] =
                 SeosTlsLib_Digest_SHA256;
             policy->sessionDigests[policy->sessionDigestsLen++]     =
@@ -76,8 +82,6 @@ derivePolicy(const SeosTlsLib_Config*      cfg,
             return SEOS_ERROR_NOT_SUPPORTED;
         }
     }
-
-#   undef MIN
 
     return SEOS_SUCCESS;
 }
@@ -337,7 +341,7 @@ handshakeImpl(SeosTlsLib_Context* ctx)
 {
     int rc;
 
-    while (true)
+    for (;;)
     {
         if ((rc = mbedtls_ssl_handshake(&ctx->mbedtls.ssl)) == 0)
         {
@@ -468,7 +472,7 @@ SeosTlsLib_init(SeosTlsLib_Context*       ctx,
     }
     else
     {
-        memcpy(&ctx->policy, cfg->policy, sizeof(SeosTlsLib_Policy));
+        ctx->policy = *cfg->policy;
     }
 
     if ((err = validatePolicy(&ctx->cfg, &ctx->policy)) != SEOS_SUCCESS)
