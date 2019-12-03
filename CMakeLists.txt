@@ -5,7 +5,7 @@ project(seos_tls C)
 add_library(
     ${PROJECT_NAME} STATIC
     "src/SeosTlsApi.c"
-    "src/SeosTls.c"
+    "src/SeosTlsLib.c"
     "src/SeosTlsRpcClient.c"
     "src/SeosTlsRpcServer.c"
 )

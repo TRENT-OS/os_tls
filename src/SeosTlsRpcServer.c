@@ -3,7 +3,7 @@
  */
 
 #include "SeosTlsRpcServer.h"
-#include "SeosTls.h"
+#include "SeosTlsLib.h"
 
 #include <string.h>
 
@@ -24,7 +24,7 @@ SeosTlsRpcServer_init(SeosTlsRpcServer_Context*         ctx,
     ctx->dataport = cfg->dataport;
 
     // We need an instance of the library for the server to work with
-    return SeosTls_init(&ctx->library, &cfg->library);
+    return SeosTlsLib_init(&ctx->library, &cfg->library);
 }
 
 seos_err_t
@@ -35,7 +35,7 @@ SeosTlsRpcServer_free(SeosTlsRpcServer_Context* ctx)
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    return SeosTls_free(&ctx->library);
+    return SeosTlsLib_free(&ctx->library);
 }
 
 // RPC functions ---------------------------------------------------------------
@@ -53,12 +53,12 @@ seos_err_t
 SeosTlsRpcServer_handshake(SeosTlsRpcServer_Handle handle)
 {
     SeosTlsRpcServer_Context* ctx = &handle->context.server;
-    if (handle->mode != SeosTls_Mode_AS_RPC_SERVER)
+    if (handle->mode != SeosTlsApi_Mode_AS_RPC_SERVER)
     {
         return SEOS_ERROR_OPERATION_DENIED;
     }
 
-    return SeosTls_handshake(&ctx->library);
+    return SeosTlsLib_handshake(&ctx->library);
 }
 
 seos_err_t
@@ -66,12 +66,12 @@ SeosTlsRpcServer_write(SeosTlsRpcServer_Handle      handle,
                        size_t                       dataSize)
 {
     SeosTlsRpcServer_Context* ctx = &handle->context.server;
-    if (handle->mode != SeosTls_Mode_AS_RPC_SERVER)
+    if (handle->mode != SeosTlsApi_Mode_AS_RPC_SERVER)
     {
         return SEOS_ERROR_OPERATION_DENIED;
     }
 
-    return SeosTls_write(&ctx->library, ctx->dataport, dataSize);
+    return SeosTlsLib_write(&ctx->library, ctx->dataport, dataSize);
 }
 
 seos_err_t
@@ -79,12 +79,12 @@ SeosTlsRpcServer_read(SeosTlsRpcServer_Handle       handle,
                       size_t*                       dataSize)
 {
     SeosTlsRpcServer_Context* ctx = &handle->context.server;
-    if (handle->mode != SeosTls_Mode_AS_RPC_SERVER)
+    if (handle->mode != SeosTlsApi_Mode_AS_RPC_SERVER)
     {
         return SEOS_ERROR_OPERATION_DENIED;
     }
 
-    return SeosTls_read(&ctx->library, ctx->dataport, dataSize);
+    return SeosTlsLib_read(&ctx->library, ctx->dataport, dataSize);
 }
 
 #endif
