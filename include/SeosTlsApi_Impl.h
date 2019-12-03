@@ -114,6 +114,10 @@ typedef struct
     struct
     {
         /**
+         * Policy can be NULL, then it is set automatically.
+         */
+        SeosTlsLib_Policy*              policy;
+        /**
          * Need an initialized crypto context for SEOS Crypto API
          */
         SeosCryptoCtx*              context;
@@ -137,10 +141,6 @@ typedef struct
         size_t                      cipherSuitesLen;
     } crypto;
     SeosTlsLib_Flag                flags;
-    /**
-     * Policy can be NULL, then it is set automatically.
-     */
-    SeosTlsLib_Policy*              policy;
 } SeosTlsLib_Config;
 
 // We need to ensure that, because based on the ciphersuites we may add digests

@@ -461,7 +461,7 @@ SeosTlsLib_init(SeosTlsLib_Context*       ctx,
     memset(ctx, 0, sizeof(SeosTlsLib_Context));
     memcpy(&ctx->cfg, cfg, sizeof(SeosTlsLib_Config));
 
-    if (NULL == cfg->policy)
+    if (NULL == cfg->crypto.policy)
     {
         // If no policy is given, derive all the policy parameters based on the
         // WEAKEST ciphersuite given by the user.
@@ -472,7 +472,7 @@ SeosTlsLib_init(SeosTlsLib_Context*       ctx,
     }
     else
     {
-        ctx->policy = *cfg->policy;
+        ctx->policy = *cfg->crypto.policy;
     }
 
     if ((err = validatePolicy(&ctx->cfg, &ctx->policy)) != SEOS_SUCCESS)
