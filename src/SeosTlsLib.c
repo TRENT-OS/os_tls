@@ -263,7 +263,7 @@ initImpl(SeosTlsLib_Context* ctx)
     // If we have debug, use internal logging function
     mbedtls_ssl_conf_dbg(&ctx->mbedtls.conf, logDebug, NULL);
 
-    // Use SeosCryptoRng for TLS
+    // Use SeosCryptoLib_Rng for TLS
     mbedtls_ssl_conf_rng(&ctx->mbedtls.conf, getRndBytes, ctx->cfg.crypto.context);
 
     if (ctx->cfg.flags & SeosTlsLib_Flag_NO_VERIFY)
