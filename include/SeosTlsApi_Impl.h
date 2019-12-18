@@ -28,7 +28,7 @@
 /**
  * Maxmimum size of PEM-encoded CA cert we accept
  */
-#define SeosTlsLib_SIZE_CA_CERT_MAX    2048
+#define SeosTlsLib_SIZE_CA_CERT_MAX    3072
 #define SeosTlsLib_MAX_CIPHERSUITES    8
 #define SeosTlsLib_MAX_DIGESTS         SeosTlsLib_MAX_CIPHERSUITES
 
