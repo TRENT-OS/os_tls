@@ -42,8 +42,8 @@ getRndBytes(void*            ctx,
             unsigned char*   buf,
             size_t           len)
 {
-    return SeosCryptoApi_rngGetBytes(ctx, 0, (void*) buf,
-                                     len) == SEOS_SUCCESS ? 0 : 1;
+    return SeosCryptoApi_Rng_getBytes(ctx, 0, (void*) buf,
+                                      len) == SEOS_SUCCESS ? 0 : 1;
 }
 
 static inline size_t
@@ -173,13 +173,13 @@ validatePolicy(const SeosTlsLib_Config*     cfg,
         }
     }
 
-    if (checkRSA && ((policy->rsaMinBits > (SeosCryptoKey_Size_RSA_MAX * 8)) ||
-                     (policy->rsaMinBits < (SeosCryptoKey_Size_RSA_MIN * 8))))
+    if (checkRSA && ((policy->rsaMinBits > (SeosCryptoApi_Key_SIZE_RSA_MAX * 8)) ||
+                     (policy->rsaMinBits < (SeosCryptoApi_Key_SIZE_AES_MIN * 8))))
     {
         return SEOS_ERROR_NOT_SUPPORTED;
     }
-    if (checkDH && ((policy->dhMinBits > (SeosCryptoKey_Size_DH_MAX * 8)) ||
-                    (policy->dhMinBits < (SeosCryptoKey_Size_DH_MIN * 8))))
+    if (checkDH && ((policy->dhMinBits > (SeosCryptoApi_Key_SIZE_DH_MAX * 8)) ||
+                    (policy->dhMinBits < (SeosCryptoApi_Key_SIZE_RSA_MIN * 8))))
     {
         return SEOS_ERROR_NOT_SUPPORTED;
     }

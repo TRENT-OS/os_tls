@@ -20,6 +20,8 @@
 #include "compiler.h"
 #include "SeosError.h"
 
+#include "LibDebug/Debug.h"
+
 #include <stddef.h>
 #include <stdbool.h>
 
@@ -116,11 +118,11 @@ typedef struct
         /**
          * Policy can be NULL, then it is set automatically.
          */
-        SeosTlsLib_Policy*              policy;
+        SeosTlsLib_Policy*          policy;
         /**
          * Need an initialized crypto context for SEOS Crypto API
          */
-        SeosCryptoCtx*              context;
+        SeosCryptoApi_Context*      context;
         /**
          * Here a certificate in PEM encoding (including headers) is passed to
          * the TLS API so it can be used to verify the root of the server's
@@ -140,7 +142,7 @@ typedef struct
         SeosTlsLib_CipherSuite      cipherSuites[SeosTlsLib_MAX_CIPHERSUITES + 1];
         size_t                      cipherSuitesLen;
     } crypto;
-    SeosTlsLib_Flag                flags;
+    SeosTlsLib_Flag                 flags;
 } SeosTlsLib_Config;
 
 // We need to ensure that, because based on the ciphersuites we may add digests

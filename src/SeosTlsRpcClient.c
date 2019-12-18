@@ -5,6 +5,8 @@
 #include "SeosTlsRpcClient.h"
 #include "SeosTlsRpcServer.h"
 
+#include "LibDebug/Debug.h"
+
 #include <string.h>
 
 // Private static functions ----------------------------------------------------

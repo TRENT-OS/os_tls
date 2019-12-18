@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "LibDebug/Debug.h"
+
 #include "SeosTlsLib.h"
 #include "SeosTlsRpcServer.h"
 #include "SeosTlsRpcClient.h"
