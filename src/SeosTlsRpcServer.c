@@ -2,6 +2,8 @@
  * Copyright (C) 2019, Hensoldt Cyber GmbH
  */
 
+#if defined(SEOS_TLS_WITH_RPC_SERVER)
+
 #include "SeosTlsRpcServer.h"
 #include "SeosTlsLib.h"
 
@@ -41,8 +43,6 @@ SeosTlsRpcServer_free(SeosTlsRpcServer_Context* ctx)
 }
 
 // RPC functions ---------------------------------------------------------------
-
-#if defined(COMPILE_AS_RPC_SERVER)
 
 /**
  * The following code will not be built when we are building a LIB (the define
@@ -89,4 +89,4 @@ SeosTlsRpcServer_read(SeosTlsRpcServer_Handle       handle,
     return SeosTlsLib_read(&ctx->library, ctx->dataport, dataSize);
 }
 
-#endif
+#endif /* SEOS_TLS_WITH_RPC_SERVER */

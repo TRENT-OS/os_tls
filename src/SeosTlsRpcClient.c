@@ -2,6 +2,8 @@
  * Copyright (C) 2019, Hensoldt Cyber GmbH
  */
 
+#if defined(SEOS_TLS_WITH_RPC_CLIENT)
+
 #include "SeosTlsRpcClient.h"
 #include "SeosTlsRpcServer.h"
 
@@ -95,3 +97,5 @@ SeosTlsRpcClient_read(SeosTlsRpcClient_Context* ctx,
 
     return rc;
 }
+
+#endif /* SEOS_TLS_WITH_RPC_CLIENT */
