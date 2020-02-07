@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2019, Hensoldt Cyber GmbH
+ * Copyright (C) 2019-2020, Hensoldt Cyber GmbH
  */
 
 #if defined(SEOS_TLS_WITH_RPC_SERVER)
@@ -16,8 +16,9 @@
 // Server functions ------------------------------------------------------------
 
 seos_err_t
-SeosTlsRpcServer_init(SeosTlsRpcServer_Context*         ctx,
-                      const SeosTlsRpcServer_Config*    cfg)
+SeosTlsRpcServer_init(
+    SeosTlsRpcServer_Context*      ctx,
+    const SeosTlsRpcServer_Config* cfg)
 {
     if (NULL == ctx || NULL == cfg)
     {
@@ -32,7 +33,8 @@ SeosTlsRpcServer_init(SeosTlsRpcServer_Context*         ctx,
 }
 
 seos_err_t
-SeosTlsRpcServer_free(SeosTlsRpcServer_Context* ctx)
+SeosTlsRpcServer_free(
+    SeosTlsRpcServer_Context* ctx)
 {
     if (NULL == ctx)
     {
@@ -52,7 +54,8 @@ SeosTlsRpcServer_free(SeosTlsRpcServer_Context* ctx)
  */
 
 seos_err_t
-SeosTlsRpcServer_handshake(SeosTlsRpcServer_Handle handle)
+SeosTlsRpcServer_handshake(
+    SeosTlsRpcServer_Handle handle)
 {
     SeosTlsRpcServer_Context* ctx = &handle->context.server;
     if (handle->mode != SeosTlsApi_Mode_AS_RPC_SERVER)
@@ -64,8 +67,9 @@ SeosTlsRpcServer_handshake(SeosTlsRpcServer_Handle handle)
 }
 
 seos_err_t
-SeosTlsRpcServer_write(SeosTlsRpcServer_Handle      handle,
-                       size_t                       dataSize)
+SeosTlsRpcServer_write(
+    SeosTlsRpcServer_Handle handle,
+    size_t                  dataSize)
 {
     SeosTlsRpcServer_Context* ctx = &handle->context.server;
     if (handle->mode != SeosTlsApi_Mode_AS_RPC_SERVER)
@@ -77,8 +81,9 @@ SeosTlsRpcServer_write(SeosTlsRpcServer_Handle      handle,
 }
 
 seos_err_t
-SeosTlsRpcServer_read(SeosTlsRpcServer_Handle       handle,
-                      size_t*                       dataSize)
+SeosTlsRpcServer_read(
+    SeosTlsRpcServer_Handle handle,
+    size_t*                 dataSize)
 {
     SeosTlsRpcServer_Context* ctx = &handle->context.server;
     if (handle->mode != SeosTlsApi_Mode_AS_RPC_SERVER)

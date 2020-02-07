@@ -32,9 +32,14 @@
 #define SeosTlsLib_MAX_CIPHERSUITES    8
 #define SeosTlsLib_MAX_DIGESTS         SeosTlsLib_MAX_CIPHERSUITES
 
-typedef int (SeosTlsLib_RecvFunc)(void* ctx, unsigned char* buf, size_t len);
-typedef int (SeosTlsLib_SendFunc)(void* ctx, const unsigned char* buf,
-                                  size_t len);
+typedef int (SeosTlsLib_RecvFunc)(
+    void*          ctx,
+    unsigned char* buf,
+    size_t         len);
+typedef int (SeosTlsLib_SendFunc)(
+    void*                ctx,
+    const unsigned char* buf,
+    size_t               len);
 
 typedef enum
 {
@@ -87,48 +92,48 @@ typedef struct
      * Note: We add +1 so the last element can be set to 0 (needed to pass the array
      * directly into mbedTLS)
      */
-    SeosTlsLib_Digest   sessionDigests[SeosTlsLib_MAX_DIGESTS + 1];
-    size_t              sessionDigestsLen;
-    SeosTlsLib_Digest   signatureDigests[SeosTlsLib_MAX_DIGESTS + 1];
-    size_t              signatureDigestsLen;
+    SeosTlsLib_Digest sessionDigests[SeosTlsLib_MAX_DIGESTS + 1];
+    size_t sessionDigestsLen;
+    SeosTlsLib_Digest signatureDigests[SeosTlsLib_MAX_DIGESTS + 1];
+    size_t signatureDigestsLen;
     /**
      * For all asymmetric operations (DH key exchange, RSA signatures, etc.)
      * we can enforce a mimimum level of security by making sure the respective
      * bit lenghts adhere to this minimum. The curve is currently set and can't
      * be changed, so there is no parameter for ECC.
      */
-    size_t          rsaMinBits;
-    size_t          dhMinBits;
+    size_t rsaMinBits;
+    size_t dhMinBits;
 } SeosTlsLib_Policy;
 
 typedef struct
 {
     struct
     {
-        SeosTlsLib_RecvFunc*    recv;
-        SeosTlsLib_SendFunc*    send;
+        SeosTlsLib_RecvFunc* recv;
+        SeosTlsLib_SendFunc* send;
         /**
          * This is a parameter which is passed into every call to send/recv.
          * Typically it would be a socket handle or similar.
          */
-        void*                   context;
+        void* context;
     } socket;
     struct
     {
         /**
          * Policy can be NULL, then it is set automatically.
          */
-        SeosTlsLib_Policy*          policy;
+        SeosTlsLib_Policy* policy;
         /**
          * Need an initialized crypto context for SEOS Crypto API
          */
-        SeosCryptoApi*      context;
+        SeosCryptoApi* context;
         /**
          * Here a certificate in PEM encoding (including headers) is passed to
          * the TLS API so it can be used to verify the root of the server's
          * certificate chain.
          */
-        char                        caCert[SeosTlsLib_SIZE_CA_CERT_MAX];
+        char caCert[SeosTlsLib_SIZE_CA_CERT_MAX];
         /**
          * For simplicity, a user can just set some ciphersuites and be fine. The hash
          * given in the cipersuites will be ENFORCED for everything (incl. session hash,
@@ -139,10 +144,10 @@ typedef struct
          * Note: We add +1 so the last element can be set to 0 (needed to pass the array
          * directly into mbedTLS)
          */
-        SeosTlsLib_CipherSuite      cipherSuites[SeosTlsLib_MAX_CIPHERSUITES + 1];
-        size_t                      cipherSuitesLen;
+        SeosTlsLib_CipherSuite cipherSuites[SeosTlsLib_MAX_CIPHERSUITES + 1];
+        size_t cipherSuitesLen;
     } crypto;
-    SeosTlsLib_Flag                 flags;
+    SeosTlsLib_Flag flags;
 } SeosTlsLib_Config;
 
 // We need to ensure that, because based on the ciphersuites we may add digests
@@ -151,29 +156,29 @@ Debug_STATIC_ASSERT(SeosTlsLib_MAX_DIGESTS >= SeosTlsLib_MAX_CIPHERSUITES);
 
 typedef struct
 {
-    bool                            open;
+    bool open;
     struct mbedtls
     {
-        mbedtls_ssl_context         ssl;
-        mbedtls_ssl_config          conf;
-        mbedtls_x509_crt            cert;
-        mbedtls_x509_crt_profile    certProfile;
+        mbedtls_ssl_context ssl;
+        mbedtls_ssl_config conf;
+        mbedtls_x509_crt cert;
+        mbedtls_x509_crt_profile certProfile;
     } mbedtls;
-    SeosTlsLib_Config               cfg;
-    SeosTlsLib_Policy               policy;
+    SeosTlsLib_Config cfg;
+    SeosTlsLib_Policy policy;
 } SeosTlsLib_Context;
 
 typedef struct
 {
-    SeosTlsLib_Config               library;
-    void*                           dataport;
+    SeosTlsLib_Config library;
+    void* dataport;
 }
 SeosTlsRpcServer_Config;
 
 typedef struct
 {
-    SeosTlsLib_Context              library;
-    void*                           dataport;
+    SeosTlsLib_Context library;
+    void* dataport;
 }
 SeosTlsRpcServer_Context;
 
@@ -182,14 +187,14 @@ typedef SeosTlsApi_Context* SeosTlsRpcServer_Handle;
 
 typedef struct
 {
-    SeosTlsRpcServer_Handle         handle;
-    void*                           dataport;
+    SeosTlsRpcServer_Handle handle;
+    void* dataport;
 } SeosTlsRpcClient_Config;
 
 typedef struct
 {
-    SeosTlsRpcServer_Handle         handle;
-    void*                           dataport;
+    SeosTlsRpcServer_Handle handle;
+    void* dataport;
 } SeosTlsRpcClient_Context;
 
 typedef enum
@@ -210,23 +215,23 @@ typedef enum
 
 struct SeosTlsApi_Context
 {
-    SeosTlsApi_Mode                     mode;
+    SeosTlsApi_Mode mode;
     union
     {
-        SeosTlsLib_Context              library;
-        SeosTlsRpcClient_Context        client;
-        SeosTlsRpcServer_Context        server;
+        SeosTlsLib_Context library;
+        SeosTlsRpcClient_Context client;
+        SeosTlsRpcServer_Context server;
     } context;
 };
 
 typedef struct
 {
-    SeosTlsApi_Mode                     mode;
+    SeosTlsApi_Mode mode;
     union
     {
-        SeosTlsLib_Config               library;
-        SeosTlsRpcClient_Config         client;
-        SeosTlsRpcServer_Config         server;
+        SeosTlsLib_Config library;
+        SeosTlsRpcClient_Config client;
+        SeosTlsRpcServer_Config server;
     } config;
 } SeosTlsApi_Config;
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2019, Hensoldt Cyber GmbH
+ * Copyright (C) 2019-2020, Hensoldt Cyber GmbH
  */
 
 #include <stdio.h>
@@ -16,11 +16,12 @@
 
 // this is called by mbedTLS to log messages
 static void
-logDebug(void*          ctx,
-         int            level,
-         const char*    file,
-         int            line,
-         const char*    str)
+logDebug(
+    void*       ctx,
+    int         level,
+    const char* file,
+    int         line,
+    const char* str)
 {
     char msg[256];
     UNUSED_VAR(ctx);
@@ -43,24 +44,27 @@ logDebug(void*          ctx,
 }
 
 static int
-getRndBytes(void*            ctx,
-            unsigned char*   buf,
-            size_t           len)
+getRndBytes(
+    void*          ctx,
+    unsigned char* buf,
+    size_t         len)
 {
     return SeosCryptoApi_Rng_getBytes(ctx, 0, (void*) buf,
                                       len) == SEOS_SUCCESS ? 0 : 1;
 }
 
 static inline size_t
-getMinOf(size_t a,
-         size_t b)
+getMinOf(
+    size_t a,
+    size_t b)
 {
     return (a < b) ? a : b;
 }
 
 static seos_err_t
-derivePolicy(const SeosTlsLib_Config*      cfg,
-             SeosTlsLib_Policy*            policy)
+derivePolicy(
+    const SeosTlsLib_Config* cfg,
+    SeosTlsLib_Policy*       policy)
 {
     memset(policy, 0, sizeof(SeosTlsLib_Policy));
     policy->dhMinBits  = 9999;
@@ -92,8 +96,9 @@ derivePolicy(const SeosTlsLib_Config*      cfg,
 }
 
 static seos_err_t
-checkSuites(const SeosTlsLib_CipherSuite*   suites,
-            const size_t                    numSuites)
+checkSuites(
+    const SeosTlsLib_CipherSuite* suites,
+    const size_t                  numSuites)
 {
     size_t i;
 
@@ -118,8 +123,9 @@ checkSuites(const SeosTlsLib_CipherSuite*   suites,
 }
 
 static seos_err_t
-validatePolicy(const SeosTlsLib_Config*     cfg,
-               const SeosTlsLib_Policy*     policy)
+validatePolicy(
+    const SeosTlsLib_Config* cfg,
+    const SeosTlsLib_Policy* policy)
 {
     size_t i;
     bool checkDH, checkRSA;
@@ -193,10 +199,11 @@ validatePolicy(const SeosTlsLib_Config*     cfg,
 }
 
 static void
-setCertProfile(const SeosTlsLib_Policy*         policy,
-               const SeosTlsLib_CipherSuite*    suites,
-               const size_t                     suitesLen,
-               mbedtls_x509_crt_profile*        profile)
+setCertProfile(
+    const SeosTlsLib_Policy*      policy,
+    const SeosTlsLib_CipherSuite* suites,
+    const size_t                  suitesLen,
+    mbedtls_x509_crt_profile*     profile)
 {
     size_t i;
 
@@ -232,7 +239,8 @@ setCertProfile(const SeosTlsLib_Policy*         policy,
 }
 
 static seos_err_t
-initImpl(SeosTlsLib_Context* ctx)
+initImpl(
+    SeosTlsLib_Context* ctx)
 {
     int rc;
 
@@ -329,7 +337,8 @@ err0:
 }
 
 static seos_err_t
-freeImpl(SeosTlsLib_Context* ctx)
+freeImpl(
+    SeosTlsLib_Context* ctx)
 {
     mbedtls_ssl_free(&ctx->mbedtls.ssl);
     if (!(ctx->cfg.flags & SeosTlsLib_Flag_NO_VERIFY))
@@ -342,7 +351,8 @@ freeImpl(SeosTlsLib_Context* ctx)
 }
 
 static seos_err_t
-handshakeImpl(SeosTlsLib_Context* ctx)
+handshakeImpl(
+    SeosTlsLib_Context* ctx)
 {
     int rc;
 
@@ -369,9 +379,10 @@ handshakeImpl(SeosTlsLib_Context* ctx)
 }
 
 static seos_err_t
-writeImpl(SeosTlsLib_Context*   ctx,
-          const void*           data,
-          const size_t          dataSize)
+writeImpl(
+    SeosTlsLib_Context* ctx,
+    const void*         data,
+    const size_t        dataSize)
 {
     int rc;
     size_t written, to_write, offs;
@@ -395,9 +406,10 @@ writeImpl(SeosTlsLib_Context*   ctx,
 }
 
 static seos_err_t
-readImpl(SeosTlsLib_Context*    ctx,
-         void*                  data,
-         size_t*                dataSize)
+readImpl(
+    SeosTlsLib_Context* ctx,
+    void*               data,
+    size_t*             dataSize)
 {
     int rc;
 
@@ -427,8 +439,9 @@ readImpl(SeosTlsLib_Context*    ctx,
 // Public functions ------------------------------------------------------------
 
 seos_err_t
-SeosTlsLib_init(SeosTlsLib_Context*       ctx,
-                const SeosTlsLib_Config*  cfg)
+SeosTlsLib_init(
+    SeosTlsLib_Context*      ctx,
+    const SeosTlsLib_Config* cfg)
 {
     seos_err_t err;
 
@@ -491,7 +504,8 @@ SeosTlsLib_init(SeosTlsLib_Context*       ctx,
 }
 
 seos_err_t
-SeosTlsLib_free(SeosTlsLib_Context* ctx)
+SeosTlsLib_free(
+    SeosTlsLib_Context* ctx)
 {
     if (NULL == ctx)
     {
@@ -502,7 +516,8 @@ SeosTlsLib_free(SeosTlsLib_Context* ctx)
 }
 
 seos_err_t
-SeosTlsLib_handshake(SeosTlsLib_Context* ctx)
+SeosTlsLib_handshake(
+    SeosTlsLib_Context* ctx)
 {
     seos_err_t err;
 
@@ -522,9 +537,10 @@ SeosTlsLib_handshake(SeosTlsLib_Context* ctx)
 }
 
 seos_err_t
-SeosTlsLib_write(SeosTlsLib_Context*        ctx,
-                 const void*                data,
-                 const size_t               dataSize)
+SeosTlsLib_write(
+    SeosTlsLib_Context* ctx,
+    const void*         data,
+    const size_t        dataSize)
 {
     if (NULL == ctx || NULL == data)
     {
@@ -539,9 +555,10 @@ SeosTlsLib_write(SeosTlsLib_Context*        ctx,
 }
 
 seos_err_t
-SeosTlsLib_read(SeosTlsLib_Context*         ctx,
-                void*                       data,
-                size_t*                     dataSize)
+SeosTlsLib_read(
+    SeosTlsLib_Context* ctx,
+    void*               data,
+    size_t*             dataSize)
 {
     if (NULL == ctx || NULL == data || NULL == dataSize)
     {

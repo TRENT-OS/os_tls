@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2019, Hensoldt Cyber GmbH
+ * Copyright (C) 2019-2020, Hensoldt Cyber GmbH
  */
 
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
@@ -16,8 +16,9 @@
 // Public functions ------------------------------------------------------------
 
 seos_err_t
-SeosTlsRpcClient_init(SeosTlsRpcClient_Context*         ctx,
-                      const SeosTlsRpcClient_Config*    cfg)
+SeosTlsRpcClient_init(
+    SeosTlsRpcClient_Context*      ctx,
+    const SeosTlsRpcClient_Config* cfg)
 {
     if (NULL == ctx || NULL == cfg || NULL == cfg->dataport || NULL == cfg->handle)
     {
@@ -32,7 +33,8 @@ SeosTlsRpcClient_init(SeosTlsRpcClient_Context*         ctx,
 }
 
 seos_err_t
-SeosTlsRpcClient_free(SeosTlsRpcClient_Context*         ctx)
+SeosTlsRpcClient_free(
+    SeosTlsRpcClient_Context* ctx)
 {
     UNUSED_VAR(ctx);
 
@@ -42,7 +44,8 @@ SeosTlsRpcClient_free(SeosTlsRpcClient_Context*         ctx)
 // RPC functions ---------------------------------------------------------------
 
 seos_err_t
-SeosTlsRpcClient_handshake(SeosTlsRpcClient_Context*    ctx)
+SeosTlsRpcClient_handshake(
+    SeosTlsRpcClient_Context* ctx)
 {
     if (NULL == ctx)
     {
@@ -53,9 +56,10 @@ SeosTlsRpcClient_handshake(SeosTlsRpcClient_Context*    ctx)
 }
 
 seos_err_t
-SeosTlsRpcClient_write(SeosTlsRpcClient_Context*    ctx,
-                       const void*                  data,
-                       const size_t                 dataSize)
+SeosTlsRpcClient_write(
+    SeosTlsRpcClient_Context* ctx,
+    const void*               data,
+    const size_t              dataSize)
 {
     if (NULL == ctx || NULL == data)
     {
@@ -72,9 +76,10 @@ SeosTlsRpcClient_write(SeosTlsRpcClient_Context*    ctx,
 }
 
 seos_err_t
-SeosTlsRpcClient_read(SeosTlsRpcClient_Context* ctx,
-                      void*                     data,
-                      size_t*                   dataSize)
+SeosTlsRpcClient_read(
+    SeosTlsRpcClient_Context* ctx,
+    void*                     data,
+    size_t*                   dataSize)
 {
     seos_err_t rc;
 

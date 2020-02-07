@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2019, Hensoldt Cyber GmbH
+ * Copyright (C) 2019-2020, Hensoldt Cyber GmbH
  */
 
 #include <stdio.h>
@@ -13,8 +13,9 @@
 #include "SeosTlsRpcClient.h"
 
 seos_err_t
-SeosTlsApi_init(SeosTlsApi_Context*         ctx,
-                const SeosTlsApi_Config*    cfg)
+SeosTlsApi_init(
+    SeosTlsApi_Context*      ctx,
+    const SeosTlsApi_Config* cfg)
 {
     if (NULL == ctx || NULL == cfg)
     {
@@ -43,7 +44,8 @@ SeosTlsApi_init(SeosTlsApi_Context*         ctx,
 }
 
 seos_err_t
-SeosTlsApi_free(SeosTlsApi_Context*     ctx)
+SeosTlsApi_free(
+    SeosTlsApi_Context* ctx)
 {
     if (NULL == ctx)
     {
@@ -70,7 +72,8 @@ SeosTlsApi_free(SeosTlsApi_Context*     ctx)
 }
 
 seos_err_t
-SeosTlsApi_handshake(SeosTlsApi_Context*    ctx)
+SeosTlsApi_handshake(
+    SeosTlsApi_Context* ctx)
 {
     if (NULL == ctx)
     {
@@ -93,9 +96,10 @@ SeosTlsApi_handshake(SeosTlsApi_Context*    ctx)
 }
 
 seos_err_t
-SeosTlsApi_write(SeosTlsApi_Context*        ctx,
-                 const void*                data,
-                 const size_t               dataSize)
+SeosTlsApi_write(
+    SeosTlsApi_Context* ctx,
+    const void*         data,
+    const size_t        dataSize)
 {
     if (NULL == ctx)
     {
@@ -118,9 +122,10 @@ SeosTlsApi_write(SeosTlsApi_Context*        ctx,
 }
 
 seos_err_t
-SeosTlsApi_read(SeosTlsApi_Context*         ctx,
-                void*                       data,
-                size_t*                     dataSize)
+SeosTlsApi_read(
+    SeosTlsApi_Context* ctx,
+    void*               data,
+    size_t*             dataSize)
 {
     if (NULL == ctx)
     {
