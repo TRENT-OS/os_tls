@@ -102,7 +102,7 @@ checkSuites(
 {
     size_t i;
 
-    if (numSuites < 0 || numSuites > SeosTlsLib_MAX_CIPHERSUITES)
+    if (numSuites <= 0 || numSuites > SeosTlsLib_MAX_CIPHERSUITES)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
@@ -462,11 +462,11 @@ SeosTlsLib_init(
         Debug_LOG_ERROR("Crypto context is NULL");
         return SEOS_ERROR_INVALID_PARAMETER;
     }
-    else if (checkSuites(cfg->crypto.cipherSuites,
-                         cfg->crypto.cipherSuitesLen) != SEOS_SUCCESS)
+    else if ((err = checkSuites(cfg->crypto.cipherSuites,
+                                cfg->crypto.cipherSuitesLen)) != SEOS_SUCCESS)
     {
         Debug_LOG_ERROR("Invalid selection of ciphersuites or too many ciphersuites given");
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return err;
     }
     else if (NULL == cfg->socket.recv || NULL == cfg->socket.send)
     {
