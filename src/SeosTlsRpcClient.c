@@ -103,4 +103,16 @@ SeosTlsRpcClient_read(
     return rc;
 }
 
+seos_err_t
+SeosTlsRpcClient_reset(
+    SeosTlsRpcClient_Context* ctx)
+{
+    if (NULL == ctx)
+    {
+        return SEOS_ERROR_INVALID_PARAMETER;
+    }
+
+    return SeosTlsRpcServer_reset(ctx->handle);
+}
+
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */

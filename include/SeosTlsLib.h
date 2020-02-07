@@ -28,5 +28,9 @@ SeosTlsLib_read(
     size_t*             dataSize);
 
 seos_err_t
+SeosTlsLib_reset(
+    SeosTlsLib_Context* ctx);
+
+seos_err_t
 SeosTlsLib_free(
     SeosTlsLib_Context* ctx);

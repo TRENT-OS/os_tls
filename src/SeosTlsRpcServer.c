@@ -94,4 +94,17 @@ SeosTlsRpcServer_read(
     return SeosTlsLib_read(&ctx->library, ctx->dataport, dataSize);
 }
 
+seos_err_t
+SeosTlsRpcServer_reset(
+    SeosTlsRpcServer_Handle handle)
+{
+    SeosTlsRpcServer_Context* ctx = &handle->context.server;
+    if (handle->mode != SeosTlsApi_Mode_AS_RPC_SERVER)
+    {
+        return SEOS_ERROR_OPERATION_DENIED;
+    }
+
+    return SeosTlsLib_reset(&ctx->library);
+}
+
 #endif /* SEOS_TLS_WITH_RPC_SERVER */

@@ -28,5 +28,9 @@ SeosTlsRpcClient_read(
     size_t*                   dataSize);
 
 seos_err_t
+SeosTlsRpcClient_reset(
+    SeosTlsRpcClient_Context* ctx);
+
+seos_err_t
 SeosTlsRpcClient_free(
     SeosTlsRpcClient_Context* ctx);

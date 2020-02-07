@@ -436,6 +436,14 @@ readImpl(
     return SEOS_ERROR_ABORTED;
 }
 
+static seos_err_t
+resetImpl(
+    SeosTlsLib_Context* ctx)
+{
+    return (mbedtls_ssl_session_reset(&ctx->mbedtls.ssl) == 0) ?
+           SEOS_SUCCESS : SEOS_ERROR_ABORTED;
+}
+
 // Public functions ------------------------------------------------------------
 
 seos_err_t
@@ -570,4 +578,21 @@ SeosTlsLib_read(
     }
 
     return readImpl(ctx, data, dataSize);
+}
+
+seos_err_t
+SeosTlsLib_reset(
+    SeosTlsLib_Context* ctx)
+{
+    if (NULL == ctx)
+    {
+        return SEOS_ERROR_INVALID_PARAMETER;
+    }
+
+    // Regardless of the success of resetImpl() we set the connection to closed,
+    // because most likely a big part of the internal data structures will be
+    // re-set even in case of error.
+    ctx->open = false;
+
+    return resetImpl(ctx);
 }

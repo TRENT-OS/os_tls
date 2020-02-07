@@ -146,3 +146,27 @@ SeosTlsApi_read(
 
     return SEOS_ERROR_GENERIC;
 }
+
+seos_err_t
+SeosTlsApi_reset(
+    SeosTlsApi_Context* ctx)
+{
+    if (NULL == ctx)
+    {
+        return SEOS_ERROR_INVALID_PARAMETER;
+    }
+
+    switch (ctx->mode)
+    {
+    case SeosTlsApi_Mode_AS_LIBRARY:
+        return SeosTlsLib_reset(&ctx->context.library);
+#if defined(SEOS_TLS_WITH_RPC_CLIENT)
+    case SeosTlsApi_Mode_AS_RPC_CLIENT:
+        return SeosTlsRpcClient_reset(&ctx->context.client);
+#endif /* SEOS_TLS_WITH_RPC_CLIENT */
+    default:
+        return SEOS_ERROR_NOT_SUPPORTED;
+    }
+
+    return SEOS_ERROR_GENERIC;
+}
