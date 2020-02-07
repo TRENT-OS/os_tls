@@ -350,9 +350,6 @@ handshakeImpl(SeosTlsLib_Context* ctx)
     {
         if ((rc = mbedtls_ssl_handshake(&ctx->mbedtls.ssl)) == 0)
         {
-            // Handshake worked, so we can now proceed using the context with
-            // write() and read() functionality...
-            ctx->open = true;
             return SEOS_SUCCESS;
         }
         else if ((rc == MBEDTLS_ERR_SSL_WANT_READ) ||
@@ -507,6 +504,8 @@ SeosTlsLib_free(SeosTlsLib_Context* ctx)
 seos_err_t
 SeosTlsLib_handshake(SeosTlsLib_Context* ctx)
 {
+    seos_err_t err;
+
     if (NULL == ctx)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
@@ -516,7 +515,10 @@ SeosTlsLib_handshake(SeosTlsLib_Context* ctx)
         return SEOS_ERROR_OPERATION_DENIED;
     }
 
-    return handshakeImpl(ctx);
+    err = handshakeImpl(ctx);
+    ctx->open = (err == SEOS_SUCCESS);
+
+    return err;
 }
 
 seos_err_t
