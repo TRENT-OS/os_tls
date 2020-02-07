@@ -185,12 +185,12 @@ validatePolicy(
     }
 
     if (checkRSA && ((policy->rsaMinBits > (SeosCryptoApi_Key_SIZE_RSA_MAX * 8)) ||
-                     (policy->rsaMinBits < (SeosCryptoApi_Key_SIZE_AES_MIN * 8))))
+                     (policy->rsaMinBits < (SeosCryptoApi_Key_SIZE_RSA_MIN * 8))))
     {
         return SEOS_ERROR_NOT_SUPPORTED;
     }
     if (checkDH && ((policy->dhMinBits > (SeosCryptoApi_Key_SIZE_DH_MAX * 8)) ||
-                    (policy->dhMinBits < (SeosCryptoApi_Key_SIZE_RSA_MIN * 8))))
+                    (policy->dhMinBits < (SeosCryptoApi_Key_SIZE_DH_MIN * 8))))
     {
         return SEOS_ERROR_NOT_SUPPORTED;
     }
