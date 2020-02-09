@@ -550,7 +550,7 @@ SeosTlsLib_write(
     const void*         data,
     const size_t        dataSize)
 {
-    if (NULL == ctx || NULL == data)
+    if (NULL == ctx || NULL == data || 0 == dataSize)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
@@ -568,7 +568,7 @@ SeosTlsLib_read(
     void*               data,
     size_t*             dataSize)
 {
-    if (NULL == ctx || NULL == data || NULL == dataSize)
+    if (NULL == ctx || NULL == data || NULL == dataSize || 0 == *dataSize)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
