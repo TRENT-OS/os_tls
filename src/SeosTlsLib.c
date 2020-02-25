@@ -14,27 +14,32 @@
 
 // Private static functions ----------------------------------------------------
 
-static void logDebug(void*          ctx,
-                     int            level,
-                     const char*    file,
-                     int            line,
-                     const char*    str)
+// this is called by mbedTLS to log messages
+static void
+logDebug(void*          ctx,
+         int            level,
+         const char*    file,
+         int            line,
+         const char*    str)
 {
     char msg[256];
     UNUSED_VAR(ctx);
     UNUSED_VAR(level);
 
-    if (strlen(file) > 16)
-    {
-        snprintf(msg, sizeof(msg), "[...%s:%05i]: %s", file + (strlen(file) - 16), line,
-                 str);
-    }
-    else
-    {
-        snprintf(msg, sizeof(msg), "[%s:%05i]: %s", file, line, str);
-    }
+    size_t len_file_name = strlen(file);
+    const size_t max_len_file = 16;
+    bool is_short_file_name = (len_file_name <= max_len_file);
 
-    Debug_PRINTF("%s", msg);
+    snprintf(
+        msg,
+        sizeof(msg),
+        "[%s%s:%05i]: %s",
+        is_short_file_name ? "" : "...",
+        &file[ is_short_file_name ?  0 : len_file_name - max_len_file],
+        line,
+        str);
+
+    Debug_LOG_INFO("%s", msg);
 }
 
 static int
