@@ -46,13 +46,6 @@ SeosTlsRpcServer_free(
 
 // RPC functions ---------------------------------------------------------------
 
-/**
- * The following code will not be built when we are building a LIB (the define
- * is set in the makefile). However, these symbols will be included when we are
- * building the component which builds SeosTlsRpcServer.c again and then links it
- * via Camkes to the RpcClient side.
- */
-
 seos_err_t
 SeosTlsRpcServer_handshake(
     SeosTlsRpcServer_Handle handle)
