@@ -2,91 +2,125 @@
  * Copyright (C) 2019-2020, Hensoldt Cyber GmbH
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "LibDebug/Debug.h"
+#include "SeosTlsApi.h"
 
 #include "SeosTlsLib.h"
 #include "SeosTlsRpcServer.h"
 #include "SeosTlsRpcClient.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+struct SeosTlsApi
+{
+    SeosTlsApi_Mode mode;
+    void* context;
+};
+
 seos_err_t
 SeosTlsApi_init(
-    SeosTlsApi_Context*      ctx,
+    SeosTlsApiH*             self,
     const SeosTlsApi_Config* cfg)
 {
-    if (NULL == ctx || NULL == cfg)
+    seos_err_t err;
+    SeosTlsApi* api;
+
+    if (NULL == self || NULL == cfg)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    ctx->mode = cfg->mode;
+    if ((api = malloc(sizeof(SeosTlsApi))) == NULL)
+    {
+        return SEOS_ERROR_INSUFFICIENT_SPACE;
+    }
+
+    memset(api, 0, sizeof(SeosTlsApi));
+    api->mode = cfg->mode;
 
     switch (cfg->mode)
     {
-    case SeosTlsApi_Mode_AS_LIBRARY:
-        return SeosTlsLib_init(&ctx->context.library, &cfg->config.library);
+    case SeosTlsApi_Mode_LIBRARY:
+        err = SeosTlsLib_init((SeosTlsLib**) &api->context, &cfg->config.library);
+        break;
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
-    case SeosTlsApi_Mode_AS_RPC_CLIENT:
-        return SeosTlsRpcClient_init(&ctx->context.client, &cfg->config.client);
+    case SeosTlsApi_Mode_RPC_CLIENT:
+        err = SeosTlsRpcClient_init((SeosTlsRpcClient**) &api->context,
+                                    &cfg->config.client);
+        break;
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
 #if defined(SEOS_TLS_WITH_RPC_SERVER)
-    case SeosTlsApi_Mode_AS_RPC_SERVER:
-        return SeosTlsRpcServer_init(&ctx->context.server, &cfg->config.server);
+    case SeosTlsApi_Mode_RPC_SERVER:
+        err = SeosTlsRpcServer_init((SeosTlsRpcServer**) &api->context,
+                                    &cfg->config.server);
+        break;
 #endif /* SEOS_TLS_WITH_RPC_SERVER */
     default:
-        return SEOS_ERROR_NOT_SUPPORTED;
+        err = SEOS_ERROR_NOT_SUPPORTED;
     }
 
-    return SEOS_ERROR_GENERIC;
+    if (SEOS_SUCCESS != err)
+    {
+        free(api);
+    }
+
+    *self = api;
+
+    return err;
 }
 
 seos_err_t
 SeosTlsApi_free(
-    SeosTlsApi_Context* ctx)
+    SeosTlsApiH self)
 {
-    if (NULL == ctx)
+    seos_err_t err;
+
+    if (NULL == self)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    switch (ctx->mode)
+    switch (self->mode)
     {
-    case SeosTlsApi_Mode_AS_LIBRARY:
-        return SeosTlsLib_free(&ctx->context.library);
+    case SeosTlsApi_Mode_LIBRARY:
+        err = SeosTlsLib_free(self->context);
+        break;
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
-    case SeosTlsApi_Mode_AS_RPC_CLIENT:
-        return SeosTlsRpcClient_free(&ctx->context.client);
+    case SeosTlsApi_Mode_RPC_CLIENT:
+        err = SeosTlsRpcClient_free(self->context);
+        break;
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
 #if defined(SEOS_TLS_WITH_RPC_SERVER)
-    case SeosTlsApi_Mode_AS_RPC_SERVER:
-        return SeosTlsRpcServer_free(&ctx->context.server);
+    case SeosTlsApi_Mode_RPC_SERVER:
+        err = SeosTlsRpcServer_free(self->context);
+        break;
 #endif /* SEOS_TLS_WITH_RPC_SERVER */
     default:
-        return SEOS_ERROR_NOT_SUPPORTED;
+        err = SEOS_ERROR_NOT_SUPPORTED;
     }
 
-    return SEOS_ERROR_GENERIC;
+    free(self);
+
+    return err;
 }
 
 seos_err_t
 SeosTlsApi_handshake(
-    SeosTlsApi_Context* ctx)
+    SeosTlsApiH self)
 {
-    if (NULL == ctx)
+    if (NULL == self)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    switch (ctx->mode)
+    switch (self->mode)
     {
-    case SeosTlsApi_Mode_AS_LIBRARY:
-        return SeosTlsLib_handshake(&ctx->context.library);
+    case SeosTlsApi_Mode_LIBRARY:
+        return SeosTlsLib_handshake(self->context);
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
-    case SeosTlsApi_Mode_AS_RPC_CLIENT:
-        return SeosTlsRpcClient_handshake(&ctx->context.client);
+    case SeosTlsApi_Mode_RPC_CLIENT:
+        return SeosTlsRpcClient_handshake(self->context);
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
     default:
         return SEOS_ERROR_NOT_SUPPORTED;
@@ -97,22 +131,22 @@ SeosTlsApi_handshake(
 
 seos_err_t
 SeosTlsApi_write(
-    SeosTlsApi_Context* ctx,
-    const void*         data,
-    const size_t        dataSize)
+    SeosTlsApiH  self,
+    const void*  data,
+    const size_t dataSize)
 {
-    if (NULL == ctx)
+    if (NULL == self)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    switch (ctx->mode)
+    switch (self->mode)
     {
-    case SeosTlsApi_Mode_AS_LIBRARY:
-        return SeosTlsLib_write(&ctx->context.library, data, dataSize);
+    case SeosTlsApi_Mode_LIBRARY:
+        return SeosTlsLib_write(self->context, data, dataSize);
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
-    case SeosTlsApi_Mode_AS_RPC_CLIENT:
-        return SeosTlsRpcClient_write(&ctx->context.client, data, dataSize);
+    case SeosTlsApi_Mode_RPC_CLIENT:
+        return SeosTlsRpcClient_write(self->context, data, dataSize);
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
     default:
         return SEOS_ERROR_NOT_SUPPORTED;
@@ -123,22 +157,22 @@ SeosTlsApi_write(
 
 seos_err_t
 SeosTlsApi_read(
-    SeosTlsApi_Context* ctx,
-    void*               data,
-    size_t*             dataSize)
+    SeosTlsApiH self,
+    void*       data,
+    size_t*     dataSize)
 {
-    if (NULL == ctx)
+    if (NULL == self)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    switch (ctx->mode)
+    switch (self->mode)
     {
-    case SeosTlsApi_Mode_AS_LIBRARY:
-        return SeosTlsLib_read(&ctx->context.library, data, dataSize);
+    case SeosTlsApi_Mode_LIBRARY:
+        return SeosTlsLib_read(self->context, data, dataSize);
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
-    case SeosTlsApi_Mode_AS_RPC_CLIENT:
-        return SeosTlsRpcClient_read(&ctx->context.client, data, dataSize);
+    case SeosTlsApi_Mode_RPC_CLIENT:
+        return SeosTlsRpcClient_read(self->context, data, dataSize);
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
     default:
         return SEOS_ERROR_NOT_SUPPORTED;
@@ -149,20 +183,20 @@ SeosTlsApi_read(
 
 seos_err_t
 SeosTlsApi_reset(
-    SeosTlsApi_Context* ctx)
+    SeosTlsApiH self)
 {
-    if (NULL == ctx)
+    if (NULL == self)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    switch (ctx->mode)
+    switch (self->mode)
     {
-    case SeosTlsApi_Mode_AS_LIBRARY:
-        return SeosTlsLib_reset(&ctx->context.library);
+    case SeosTlsApi_Mode_LIBRARY:
+        return SeosTlsLib_reset(self->context);
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
-    case SeosTlsApi_Mode_AS_RPC_CLIENT:
-        return SeosTlsRpcClient_reset(&ctx->context.client);
+    case SeosTlsApi_Mode_RPC_CLIENT:
+        return SeosTlsRpcClient_reset(self->context);
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
     default:
         return SEOS_ERROR_NOT_SUPPORTED;

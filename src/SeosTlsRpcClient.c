@@ -7,9 +7,14 @@
 #include "SeosTlsRpcClient.h"
 #include "SeosTlsRpcServer.h"
 
-#include "LibDebug/Debug.h"
-
 #include <string.h>
+#include <stdlib.h>
+
+struct SeosTlsRpcClient
+{
+    SeosTlsRpcServer_Handle handle;
+    void* dataport;
+};
 
 // Private static functions ----------------------------------------------------
 
@@ -17,26 +22,39 @@
 
 seos_err_t
 SeosTlsRpcClient_init(
-    SeosTlsRpcClient_Context*      ctx,
+    SeosTlsRpcClient**             self,
     const SeosTlsRpcClient_Config* cfg)
 {
-    if (NULL == ctx || NULL == cfg || NULL == cfg->dataport || NULL == cfg->handle)
+    SeosTlsRpcClient* cli;
+
+    if (NULL == self || NULL == cfg || NULL == cfg->dataport || NULL == cfg->handle)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    memset(ctx, 0, sizeof(SeosTlsRpcClient_Context));
-    ctx->handle     = cfg->handle;
-    ctx->dataport   = cfg->dataport;
+    if ((cli = malloc(sizeof(SeosTlsRpcClient))) == NULL)
+    {
+        return SEOS_ERROR_INSUFFICIENT_SPACE;
+    }
+
+    *self = cli;
+    memset(cli, 0, sizeof(SeosTlsRpcClient));
+    cli->handle     = cfg->handle;
+    cli->dataport   = cfg->dataport;
 
     return SEOS_SUCCESS;
 }
 
 seos_err_t
 SeosTlsRpcClient_free(
-    SeosTlsRpcClient_Context* ctx)
+    SeosTlsRpcClient* self)
 {
-    UNUSED_VAR(ctx);
+    if (NULL == self)
+    {
+        return SEOS_ERROR_INVALID_PARAMETER;
+    }
+
+    free(self);
 
     return SEOS_SUCCESS;
 }
@@ -45,23 +63,23 @@ SeosTlsRpcClient_free(
 
 seos_err_t
 SeosTlsRpcClient_handshake(
-    SeosTlsRpcClient_Context* ctx)
+    SeosTlsRpcClient* self)
 {
-    if (NULL == ctx)
+    if (NULL == self)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    return SeosTlsRpcServer_handshake(ctx->handle);
+    return SeosTlsRpcServer_handshake(self->handle);
 }
 
 seos_err_t
 SeosTlsRpcClient_write(
-    SeosTlsRpcClient_Context* ctx,
-    const void*               data,
-    const size_t              dataSize)
+    SeosTlsRpcClient* self,
+    const void*       data,
+    const size_t      dataSize)
 {
-    if (NULL == ctx || NULL == data)
+    if (NULL == self || NULL == data)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
@@ -70,25 +88,25 @@ SeosTlsRpcClient_write(
         return SEOS_ERROR_INSUFFICIENT_SPACE;
     }
 
-    memcpy(ctx->dataport, data, dataSize);
+    memcpy(self->dataport, data, dataSize);
 
-    return SeosTlsRpcServer_write(ctx->handle, dataSize);
+    return SeosTlsRpcServer_write(self->handle, dataSize);
 }
 
 seos_err_t
 SeosTlsRpcClient_read(
-    SeosTlsRpcClient_Context* ctx,
-    void*                     data,
-    size_t*                   dataSize)
+    SeosTlsRpcClient* self,
+    void*             data,
+    size_t*           dataSize)
 {
     seos_err_t rc;
 
-    if (NULL == ctx || NULL == data || NULL == dataSize)
+    if (NULL == self || NULL == data || NULL == dataSize)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    if ((rc = SeosTlsRpcServer_read(ctx->handle, dataSize)) == SEOS_SUCCESS)
+    if ((rc = SeosTlsRpcServer_read(self->handle, dataSize)) == SEOS_SUCCESS)
     {
         if (*dataSize > PAGE_SIZE)
         {
@@ -96,7 +114,7 @@ SeosTlsRpcClient_read(
         }
         else
         {
-            memcpy(data, ctx->dataport, *dataSize);
+            memcpy(data, self->dataport, *dataSize);
         }
     }
 
@@ -105,14 +123,14 @@ SeosTlsRpcClient_read(
 
 seos_err_t
 SeosTlsRpcClient_reset(
-    SeosTlsRpcClient_Context* ctx)
+    SeosTlsRpcClient* self)
 {
-    if (NULL == ctx)
+    if (NULL == self)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    return SeosTlsRpcServer_reset(ctx->handle);
+    return SeosTlsRpcServer_reset(self->handle);
 }
 
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */

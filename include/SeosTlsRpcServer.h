@@ -4,11 +4,13 @@
 
 #pragma once
 
-#include "SeosTlsApi_Impl.h"
+#include "SeosTlsApi.h"
+
+typedef struct SeosTlsRpcServer SeosTlsRpcServer;
 
 seos_err_t
 SeosTlsRpcServer_init(
-    SeosTlsRpcServer_Context*      ctx,
+    SeosTlsRpcServer**             self,
     const SeosTlsRpcServer_Config* cfg);
 
 seos_err_t
@@ -31,4 +33,4 @@ SeosTlsRpcServer_reset(
 
 seos_err_t
 SeosTlsRpcServer_free(
-    SeosTlsRpcServer_Context* ctx);
+    SeosTlsRpcServer* self);

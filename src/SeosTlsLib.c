@@ -2,15 +2,30 @@
  * Copyright (C) 2019-2020, Hensoldt Cyber GmbH
  */
 
+#include "SeosTlsApi.h"
+
+#include "SeosTlsLib.h"
+
+#include "mbedtls/debug.h"
+#include "LibDebug/Debug.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "mbedtls/debug.h"
-
-#include "SeosTlsLib.h"
-
-#include "LibDebug/Debug.h"
+struct SeosTlsLib
+{
+    bool open;
+    struct mbedtls
+    {
+        mbedtls_ssl_context ssl;
+        mbedtls_ssl_config conf;
+        mbedtls_x509_crt cert;
+        mbedtls_x509_crt_profile certProfile;
+    } mbedtls;
+    SeosTlsLib_Config cfg;
+    SeosTlsLib_Policy policy;
+};
 
 // Private static functions ----------------------------------------------------
 
@@ -240,13 +255,13 @@ setCertProfile(
 
 static seos_err_t
 initImpl(
-    SeosTlsLib_Context* ctx)
+    SeosTlsLib* self)
 {
     int rc;
 
     // Apply default configuration first, the override parts of it..
-    mbedtls_ssl_config_init(&ctx->mbedtls.conf);
-    if ((rc = mbedtls_ssl_config_defaults(&ctx->mbedtls.conf,
+    mbedtls_ssl_config_init(&self->mbedtls.conf);
+    if ((rc = mbedtls_ssl_config_defaults(&self->mbedtls.conf,
                                           MBEDTLS_SSL_IS_CLIENT,
                                           MBEDTLS_SSL_TRANSPORT_STREAM,
                                           MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
@@ -257,65 +272,66 @@ initImpl(
 
     // Which ciphersuites are allowed? This heavily depends on the state of the
     // modified mbedTLS and cannot simply be changed!!
-    mbedtls_ssl_conf_ciphersuites(&ctx->mbedtls.conf,
-                                  (int*) ctx->cfg.crypto.cipherSuites);
+    mbedtls_ssl_conf_ciphersuites(&self->mbedtls.conf,
+                                  (int*) self->cfg.crypto.cipherSuites);
 
     // Which hashes do we allow for server signatures?
-    mbedtls_ssl_conf_sig_hashes(&ctx->mbedtls.conf,
-                                (int*) ctx->policy.signatureDigests);
+    mbedtls_ssl_conf_sig_hashes(&self->mbedtls.conf,
+                                (int*) self->policy.signatureDigests);
 
     // Which certs do we accept (hashes, rsa bitlen)
-    setCertProfile(&ctx->policy, ctx->cfg.crypto.cipherSuites,
-                   ctx->cfg.crypto.cipherSuitesLen, &ctx->mbedtls.certProfile);
-    mbedtls_ssl_conf_cert_profile(&ctx->mbedtls.conf, &ctx->mbedtls.certProfile);
+    setCertProfile(&self->policy, self->cfg.crypto.cipherSuites,
+                   self->cfg.crypto.cipherSuitesLen, &self->mbedtls.certProfile);
+    mbedtls_ssl_conf_cert_profile(&self->mbedtls.conf, &self->mbedtls.certProfile);
 
     // What is the minimum bitlen we allow for DH-based key exchanges?
-    mbedtls_ssl_conf_dhm_min_bitlen(&ctx->mbedtls.conf,
-                                    ctx->policy.dhMinBits);
+    mbedtls_ssl_conf_dhm_min_bitlen(&self->mbedtls.conf,
+                                    self->policy.dhMinBits);
 
     // If we have debug, use internal logging function
-    mbedtls_ssl_conf_dbg(&ctx->mbedtls.conf, logDebug, NULL);
+    mbedtls_ssl_conf_dbg(&self->mbedtls.conf, logDebug, NULL);
 
     // Use SeosCryptoLib_Rng for TLS
-    mbedtls_ssl_conf_rng(&ctx->mbedtls.conf, getRndBytes, ctx->cfg.crypto.context);
+    mbedtls_ssl_conf_rng(&self->mbedtls.conf, getRndBytes,
+                         self->cfg.crypto.context);
 
-    if (ctx->cfg.flags & SeosTlsLib_Flag_NO_VERIFY)
+    if (self->cfg.flags & SeosTlsLib_Flag_NO_VERIFY)
     {
         // We need to have the option to disable cert verification, even though it
         // is not advisable
         Debug_LOG_INFO("TLS certificate verification is disabled, this is NOT secure!");
-        mbedtls_ssl_conf_authmode(&ctx->mbedtls.conf, MBEDTLS_SSL_VERIFY_NONE);
+        mbedtls_ssl_conf_authmode(&self->mbedtls.conf, MBEDTLS_SSL_VERIFY_NONE);
     }
     else
     {
-        mbedtls_x509_crt_init(&ctx->mbedtls.cert);
-        if ((rc = mbedtls_x509_crt_parse(&ctx->mbedtls.cert,
-                                         (const unsigned char*)ctx->cfg.crypto.caCert,
-                                         strlen(ctx->cfg.crypto.caCert) + 1)) != 0)
+        mbedtls_x509_crt_init(&self->mbedtls.cert);
+        if ((rc = mbedtls_x509_crt_parse(&self->mbedtls.cert,
+                                         (const unsigned char*)self->cfg.crypto.caCert,
+                                         strlen(self->cfg.crypto.caCert) + 1)) != 0)
         {
             Debug_LOG_ERROR("mbedtls_x509_crt_parse() with code 0x%04x", rc);
             goto err1;
         }
-        mbedtls_ssl_conf_ca_chain(&ctx->mbedtls.conf, &ctx->mbedtls.cert, NULL);
-        mbedtls_ssl_conf_authmode(&ctx->mbedtls.conf, MBEDTLS_SSL_VERIFY_REQUIRED);
+        mbedtls_ssl_conf_ca_chain(&self->mbedtls.conf, &self->mbedtls.cert, NULL);
+        mbedtls_ssl_conf_authmode(&self->mbedtls.conf, MBEDTLS_SSL_VERIFY_REQUIRED);
     }
 
     // Output levels: (0) none, (1) error, (2) + state change, (3) + informational
-    mbedtls_debug_set_threshold((ctx->cfg.flags & SeosTlsLib_Flag_DEBUG) ? 3 : 0);
+    mbedtls_debug_set_threshold((self->cfg.flags & SeosTlsLib_Flag_DEBUG) ? 3 : 0);
 
-    mbedtls_ssl_init(&ctx->mbedtls.ssl);
+    mbedtls_ssl_init(&self->mbedtls.ssl);
 
     // Attention: This has to happen before mbedtls_ssl_setup() is called, as
     // the crypto context is already needed during setup so that it can be used
     // in ssl_handshake_params_init() for the initialization of the digests.
-    mbedtls_ssl_set_crypto(&ctx->mbedtls.ssl, ctx->cfg.crypto.context);
+    mbedtls_ssl_set_crypto(&self->mbedtls.ssl, self->cfg.crypto.context);
 
     // Set the send/recv callbacks to work on the socket context
-    mbedtls_ssl_set_bio(&ctx->mbedtls.ssl, ctx->cfg.socket.context,
-                        ctx->cfg.socket.send,
-                        ctx->cfg.socket.recv, NULL);
+    mbedtls_ssl_set_bio(&self->mbedtls.ssl, self->cfg.socket.context,
+                        self->cfg.socket.send,
+                        self->cfg.socket.recv, NULL);
 
-    if ((rc = mbedtls_ssl_setup(&ctx->mbedtls.ssl, &ctx->mbedtls.conf)) != 0)
+    if ((rc = mbedtls_ssl_setup(&self->mbedtls.ssl, &self->mbedtls.conf)) != 0)
     {
         Debug_LOG_ERROR("mbedtls_ssl_setup() with code 0x%04x", rc);
         goto err2;
@@ -324,41 +340,41 @@ initImpl(
     return SEOS_SUCCESS;
 
 err2:
-    mbedtls_ssl_free(&ctx->mbedtls.ssl);
+    mbedtls_ssl_free(&self->mbedtls.ssl);
 err1:
-    if (!(ctx->cfg.flags & SeosTlsLib_Flag_NO_VERIFY))
+    if (!(self->cfg.flags & SeosTlsLib_Flag_NO_VERIFY))
     {
-        mbedtls_x509_crt_free(&ctx->mbedtls.cert);
+        mbedtls_x509_crt_free(&self->mbedtls.cert);
     }
 err0:
-    mbedtls_ssl_config_free(&ctx->mbedtls.conf);
+    mbedtls_ssl_config_free(&self->mbedtls.conf);
 
     return SEOS_ERROR_ABORTED;
 }
 
 static seos_err_t
 freeImpl(
-    SeosTlsLib_Context* ctx)
+    SeosTlsLib* self)
 {
-    mbedtls_ssl_free(&ctx->mbedtls.ssl);
-    if (!(ctx->cfg.flags & SeosTlsLib_Flag_NO_VERIFY))
+    mbedtls_ssl_free(&self->mbedtls.ssl);
+    if (!(self->cfg.flags & SeosTlsLib_Flag_NO_VERIFY))
     {
-        mbedtls_x509_crt_free(&ctx->mbedtls.cert);
+        mbedtls_x509_crt_free(&self->mbedtls.cert);
     }
-    mbedtls_ssl_config_free(&ctx->mbedtls.conf);
+    mbedtls_ssl_config_free(&self->mbedtls.conf);
 
     return SEOS_SUCCESS;
 }
 
 static seos_err_t
 handshakeImpl(
-    SeosTlsLib_Context* ctx)
+    SeosTlsLib* self)
 {
     int rc;
 
     for (;;)
     {
-        if ((rc = mbedtls_ssl_handshake(&ctx->mbedtls.ssl)) == 0)
+        if ((rc = mbedtls_ssl_handshake(&self->mbedtls.ssl)) == 0)
         {
             return SEOS_SUCCESS;
         }
@@ -380,9 +396,9 @@ handshakeImpl(
 
 static seos_err_t
 writeImpl(
-    SeosTlsLib_Context* ctx,
-    const void*         data,
-    const size_t        dataSize)
+    SeosTlsLib*  self,
+    const void*  data,
+    const size_t dataSize)
 {
     int rc;
     size_t written, to_write, offs;
@@ -391,7 +407,7 @@ writeImpl(
     offs     = 0;
     while (to_write > 0)
     {
-        if ((rc = mbedtls_ssl_write(&ctx->mbedtls.ssl, data + offs, to_write)) <= 0)
+        if ((rc = mbedtls_ssl_write(&self->mbedtls.ssl, data + offs, to_write)) <= 0)
         {
             Debug_LOG_ERROR("mbedtls_ssl_write() with code 0x%04x", rc);
             return SEOS_ERROR_ABORTED;
@@ -407,13 +423,13 @@ writeImpl(
 
 static seos_err_t
 readImpl(
-    SeosTlsLib_Context* ctx,
-    void*               data,
-    size_t*             dataSize)
+    SeosTlsLib* self,
+    void*       data,
+    size_t*     dataSize)
 {
     int rc;
 
-    rc = mbedtls_ssl_read(&ctx->mbedtls.ssl, data, *dataSize);
+    rc = mbedtls_ssl_read(&self->mbedtls.ssl, data, *dataSize);
     if (rc > 0)
     {
         // We got some data
@@ -427,7 +443,7 @@ readImpl(
         // Server has signaled that the connection will be closed; so we know
         // that there will be no more data
         *dataSize = 0;
-        ctx->open = false;
+        self->open = false;
         return SEOS_SUCCESS;
     }
 
@@ -438,9 +454,9 @@ readImpl(
 
 static seos_err_t
 resetImpl(
-    SeosTlsLib_Context* ctx)
+    SeosTlsLib* self)
 {
-    return (mbedtls_ssl_session_reset(&ctx->mbedtls.ssl) == 0) ?
+    return (mbedtls_ssl_session_reset(&self->mbedtls.ssl) == 0) ?
            SEOS_SUCCESS : SEOS_ERROR_ABORTED;
 }
 
@@ -448,12 +464,13 @@ resetImpl(
 
 seos_err_t
 SeosTlsLib_init(
-    SeosTlsLib_Context*      ctx,
+    SeosTlsLib**             self,
     const SeosTlsLib_Config* cfg)
 {
     seos_err_t err;
+    SeosTlsLib* lib;
 
-    if (NULL == ctx || NULL == cfg)
+    if (NULL == self || NULL == cfg)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
@@ -481,110 +498,124 @@ SeosTlsLib_init(
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    memset(ctx, 0, sizeof(SeosTlsLib_Context));
-    memcpy(&ctx->cfg, cfg, sizeof(SeosTlsLib_Config));
+    if ((lib = malloc(sizeof(SeosTlsLib))) == NULL)
+    {
+        return SEOS_ERROR_INSUFFICIENT_SPACE;
+    }
+
+    *self = lib;
+    memset(lib, 0, sizeof(SeosTlsLib));
+    memcpy(&lib->cfg, cfg, sizeof(SeosTlsLib_Config));
 
     if (NULL == cfg->crypto.policy)
     {
         // If no policy is given, derive all the policy parameters based on the
         // WEAKEST ciphersuite given by the user.
-        derivePolicy(&ctx->cfg, &ctx->policy);
+        derivePolicy(&lib->cfg, &lib->policy);
         Debug_LOG_INFO("Derived policy with %i/%i digests and rsaMinBits=%i, dhMinBits=%i",
-                       ctx->policy.sessionDigestsLen, ctx->policy.signatureDigestsLen,
-                       ctx->policy.rsaMinBits, ctx->policy.dhMinBits);
+                       lib->policy.sessionDigestsLen, lib->policy.signatureDigestsLen,
+                       lib->policy.rsaMinBits, lib->policy.dhMinBits);
     }
     else
     {
-        ctx->policy = *cfg->crypto.policy;
+        lib->policy = *cfg->crypto.policy;
     }
 
-    if ((err = validatePolicy(&ctx->cfg, &ctx->policy)) != SEOS_SUCCESS)
+    if ((err = validatePolicy(&lib->cfg, &lib->policy)) == SEOS_SUCCESS)
     {
-        Debug_LOG_ERROR("Policy is not valid");
-        return err;
+        // These two need to be zero-terminated so they can be passed to mbedTLS!
+        lib->cfg.crypto.cipherSuites[lib->cfg.crypto.cipherSuitesLen] = 0;
+        lib->policy.signatureDigests[lib->policy.signatureDigestsLen] = 0;
+        err = initImpl(lib);
     }
 
-    // These two need to be zero-terminated so they can be passed to mbedTLS!
-    ctx->cfg.crypto.cipherSuites[ctx->cfg.crypto.cipherSuitesLen] = 0;
-    ctx->policy.signatureDigests[ctx->policy.signatureDigestsLen] = 0;
+    if (SEOS_SUCCESS != err)
+    {
+        free(lib);
+    }
 
-    return initImpl(ctx);
+    return err;
 }
 
 seos_err_t
 SeosTlsLib_free(
-    SeosTlsLib_Context* ctx)
+    SeosTlsLib* self)
 {
-    if (NULL == ctx)
+    seos_err_t err;
+
+    if (NULL == self)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    return freeImpl(ctx);
+    err = freeImpl(self);
+    free(self);
+
+    return err;
 }
 
 seos_err_t
 SeosTlsLib_handshake(
-    SeosTlsLib_Context* ctx)
+    SeosTlsLib* self)
 {
     seos_err_t err;
 
-    if (NULL == ctx)
+    if (NULL == self)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
-    else if (ctx->open)
+    else if (self->open)
     {
         return SEOS_ERROR_OPERATION_DENIED;
     }
 
-    err = handshakeImpl(ctx);
-    ctx->open = (err == SEOS_SUCCESS);
+    err = handshakeImpl(self);
+    self->open = (err == SEOS_SUCCESS);
 
     return err;
 }
 
 seos_err_t
 SeosTlsLib_write(
-    SeosTlsLib_Context* ctx,
-    const void*         data,
-    const size_t        dataSize)
+    SeosTlsLib*  self,
+    const void*  data,
+    const size_t dataSize)
 {
-    if (NULL == ctx || NULL == data || 0 == dataSize)
+    if (NULL == self || NULL == data || 0 == dataSize)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
-    else if (!ctx->open)
+    else if (!self->open)
     {
         return SEOS_ERROR_OPERATION_DENIED;
     }
 
-    return writeImpl(ctx, data, dataSize);
+    return writeImpl(self, data, dataSize);
 }
 
 seos_err_t
 SeosTlsLib_read(
-    SeosTlsLib_Context* ctx,
-    void*               data,
-    size_t*             dataSize)
+    SeosTlsLib* self,
+    void*       data,
+    size_t*     dataSize)
 {
-    if (NULL == ctx || NULL == data || NULL == dataSize || 0 == *dataSize)
+    if (NULL == self || NULL == data || NULL == dataSize || 0 == *dataSize)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
-    else if (!ctx->open)
+    else if (!self->open)
     {
         return SEOS_ERROR_OPERATION_DENIED;
     }
 
-    return readImpl(ctx, data, dataSize);
+    return readImpl(self, data, dataSize);
 }
 
 seos_err_t
 SeosTlsLib_reset(
-    SeosTlsLib_Context* ctx)
+    SeosTlsLib* self)
 {
-    if (NULL == ctx)
+    if (NULL == self)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
@@ -592,7 +623,7 @@ SeosTlsLib_reset(
     // Regardless of the success of resetImpl() we set the connection to closed,
     // because most likely a big part of the internal data structures will be
     // re-set even in case of error.
-    ctx->open = false;
+    self->open = false;
 
-    return resetImpl(ctx);
+    return resetImpl(self);
 }

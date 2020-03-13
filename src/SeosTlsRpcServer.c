@@ -4,12 +4,17 @@
 
 #if defined(SEOS_TLS_WITH_RPC_SERVER)
 
-#include "SeosTlsRpcServer.h"
 #include "SeosTlsLib.h"
-
-#include "LibDebug/Debug.h"
+#include "SeosTlsRpcServer.h"
 
 #include <string.h>
+#include <stdlib.h>
+
+struct SeosTlsRpcServer
+{
+    SeosTlsLib* library;
+    void* dataport;
+};
 
 // Private static functions ----------------------------------------------------
 
@@ -17,31 +22,50 @@
 
 seos_err_t
 SeosTlsRpcServer_init(
-    SeosTlsRpcServer_Context*      ctx,
+    SeosTlsRpcServer**             self,
     const SeosTlsRpcServer_Config* cfg)
 {
-    if (NULL == ctx || NULL == cfg)
+    SeosTlsRpcServer* svr;
+    seos_err_t err;
+
+    if (NULL == self || NULL == cfg)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    memset(ctx, 0, sizeof(SeosTlsRpcServer_Context));
-    ctx->dataport = cfg->dataport;
+    if ((svr = malloc(sizeof(SeosTlsRpcServer))) == NULL)
+    {
+        return SEOS_ERROR_INSUFFICIENT_SPACE;
+    }
+
+    *self = svr;
+    memset(svr, 0, sizeof(SeosTlsRpcServer));
+    svr->dataport = cfg->dataport;
 
     // We need an instance of the library for the server to work with
-    return SeosTlsLib_init(&ctx->library, &cfg->library);
+    if ((err = SeosTlsLib_init(&svr->library, &cfg->library)) != SEOS_SUCCESS)
+    {
+        free(svr);
+    }
+
+    return err;
 }
 
 seos_err_t
 SeosTlsRpcServer_free(
-    SeosTlsRpcServer_Context* ctx)
+    SeosTlsRpcServer* self)
 {
-    if (NULL == ctx)
+    seos_err_t err;
+
+    if (NULL == self)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    return SeosTlsLib_free(&ctx->library);
+    err = SeosTlsLib_free(self->library);
+    free(self);
+
+    return err;
 }
 
 // RPC functions ---------------------------------------------------------------
@@ -50,13 +74,13 @@ seos_err_t
 SeosTlsRpcServer_handshake(
     SeosTlsRpcServer_Handle handle)
 {
-    SeosTlsRpcServer_Context* ctx = &handle->context.server;
-    if (handle->mode != SeosTlsApi_Mode_AS_RPC_SERVER)
+    SeosTlsRpcServer* self = handle->context;
+    if (handle->mode != SeosTlsApi_Mode_RPC_SERVER)
     {
         return SEOS_ERROR_OPERATION_DENIED;
     }
 
-    return SeosTlsLib_handshake(&ctx->library);
+    return SeosTlsLib_handshake(self->library);
 }
 
 seos_err_t
@@ -64,13 +88,13 @@ SeosTlsRpcServer_write(
     SeosTlsRpcServer_Handle handle,
     size_t                  dataSize)
 {
-    SeosTlsRpcServer_Context* ctx = &handle->context.server;
-    if (handle->mode != SeosTlsApi_Mode_AS_RPC_SERVER)
+    SeosTlsRpcServer* self = handle->context;
+    if (handle->mode != SeosTlsApi_Mode_RPC_SERVER)
     {
         return SEOS_ERROR_OPERATION_DENIED;
     }
 
-    return SeosTlsLib_write(&ctx->library, ctx->dataport, dataSize);
+    return SeosTlsLib_write(self->library, self->dataport, dataSize);
 }
 
 seos_err_t
@@ -78,26 +102,26 @@ SeosTlsRpcServer_read(
     SeosTlsRpcServer_Handle handle,
     size_t*                 dataSize)
 {
-    SeosTlsRpcServer_Context* ctx = &handle->context.server;
-    if (handle->mode != SeosTlsApi_Mode_AS_RPC_SERVER)
+    SeosTlsRpcServer* self = handle->context;
+    if (handle->mode != SeosTlsApi_Mode_RPC_SERVER)
     {
         return SEOS_ERROR_OPERATION_DENIED;
     }
 
-    return SeosTlsLib_read(&ctx->library, ctx->dataport, dataSize);
+    return SeosTlsLib_read(self->library, self->dataport, dataSize);
 }
 
 seos_err_t
 SeosTlsRpcServer_reset(
     SeosTlsRpcServer_Handle handle)
 {
-    SeosTlsRpcServer_Context* ctx = &handle->context.server;
-    if (handle->mode != SeosTlsApi_Mode_AS_RPC_SERVER)
+    SeosTlsRpcServer* self = handle->context;
+    if (handle->mode != SeosTlsApi_Mode_RPC_SERVER)
     {
         return SEOS_ERROR_OPERATION_DENIED;
     }
 
-    return SeosTlsLib_reset(&ctx->library);
+    return SeosTlsLib_reset(self->library);
 }
 
 #endif /* SEOS_TLS_WITH_RPC_SERVER */

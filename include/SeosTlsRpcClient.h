@@ -4,33 +4,35 @@
 
 #pragma once
 
-#include "SeosTlsApi_Impl.h"
+#include "SeosTlsApi.h"
+
+typedef struct SeosTlsRpcClient SeosTlsRpcClient;
 
 seos_err_t
 SeosTlsRpcClient_init(
-    SeosTlsRpcClient_Context*      ctx,
+    SeosTlsRpcClient**             self,
     const SeosTlsRpcClient_Config* cfg);
 
 seos_err_t
 SeosTlsRpcClient_handshake(
-    SeosTlsRpcClient_Context* ctx);
+    SeosTlsRpcClient* self);
 
 seos_err_t
 SeosTlsRpcClient_write(
-    SeosTlsRpcClient_Context* ctx,
-    const void*               data,
-    const size_t              dataSize);
+    SeosTlsRpcClient* self,
+    const void*       data,
+    const size_t      dataSize);
 
 seos_err_t
 SeosTlsRpcClient_read(
-    SeosTlsRpcClient_Context* ctx,
-    void*                     data,
-    size_t*                   dataSize);
+    SeosTlsRpcClient* self,
+    void*             data,
+    size_t*           dataSize);
 
 seos_err_t
 SeosTlsRpcClient_reset(
-    SeosTlsRpcClient_Context* ctx);
+    SeosTlsRpcClient* self);
 
 seos_err_t
 SeosTlsRpcClient_free(
-    SeosTlsRpcClient_Context* ctx);
+    SeosTlsRpcClient* self);
