@@ -293,7 +293,7 @@ initImpl(
 
     // Use SeosCryptoLib_Rng for TLS
     mbedtls_ssl_conf_rng(&self->mbedtls.conf, getRndBytes,
-                         self->cfg.crypto.context);
+                         (void*) self->cfg.crypto.handle);
 
     if (self->cfg.flags & SeosTlsLib_Flag_NO_VERIFY)
     {
@@ -324,7 +324,7 @@ initImpl(
     // Attention: This has to happen before mbedtls_ssl_setup() is called, as
     // the crypto context is already needed during setup so that it can be used
     // in ssl_handshake_params_init() for the initialization of the digests.
-    mbedtls_ssl_set_crypto(&self->mbedtls.ssl, self->cfg.crypto.context);
+    mbedtls_ssl_set_crypto(&self->mbedtls.ssl, self->cfg.crypto.handle);
 
     // Set the send/recv callbacks to work on the socket context
     mbedtls_ssl_set_bio(&self->mbedtls.ssl, self->cfg.socket.context,
@@ -474,7 +474,7 @@ SeosTlsLib_init(
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
-    else if (NULL == cfg->crypto.context)
+    else if (NULL == cfg->crypto.handle)
     {
         Debug_LOG_ERROR("Crypto context is NULL");
         return SEOS_ERROR_INVALID_PARAMETER;
