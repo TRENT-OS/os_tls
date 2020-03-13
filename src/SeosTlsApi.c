@@ -5,8 +5,8 @@
 #include "SeosTlsApi.h"
 
 #include "SeosTlsLib.h"
-#include "SeosTlsRpcServer.h"
-#include "SeosTlsRpcClient.h"
+#include "SeosTlsRpc_Server.h"
+#include "SeosTlsRpc_Client.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,14 +46,14 @@ SeosTlsApi_init(
         break;
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
     case SeosTlsApi_Mode_RPC_CLIENT:
-        err = SeosTlsRpcClient_init((SeosTlsRpcClient**) &api->context,
-                                    &cfg->config.client);
+        err = SeosTlsRpc_Client_init((SeosTlsRpc_Client**) &api->context,
+                                     &cfg->config.client);
         break;
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
 #if defined(SEOS_TLS_WITH_RPC_SERVER)
     case SeosTlsApi_Mode_RPC_SERVER:
-        err = SeosTlsRpcServer_init((SeosTlsRpcServer**) &api->context,
-                                    &cfg->config.server);
+        err = SeosTlsRpc_Server_init((SeosTlsRpc_Server**) &api->context,
+                                     &cfg->config.server);
         break;
 #endif /* SEOS_TLS_WITH_RPC_SERVER */
     default:
@@ -88,12 +88,12 @@ SeosTlsApi_free(
         break;
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
     case SeosTlsApi_Mode_RPC_CLIENT:
-        err = SeosTlsRpcClient_free(self->context);
+        err = SeosTlsRpc_Client_free(self->context);
         break;
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
 #if defined(SEOS_TLS_WITH_RPC_SERVER)
     case SeosTlsApi_Mode_RPC_SERVER:
-        err = SeosTlsRpcServer_free(self->context);
+        err = SeosTlsRpc_Server_free(self->context);
         break;
 #endif /* SEOS_TLS_WITH_RPC_SERVER */
     default:
@@ -120,7 +120,7 @@ SeosTlsApi_handshake(
         return SeosTlsLib_handshake(self->context);
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
     case SeosTlsApi_Mode_RPC_CLIENT:
-        return SeosTlsRpcClient_handshake(self->context);
+        return SeosTlsRpc_Client_handshake(self->context);
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
     default:
         return SEOS_ERROR_NOT_SUPPORTED;
@@ -146,7 +146,7 @@ SeosTlsApi_write(
         return SeosTlsLib_write(self->context, data, dataSize);
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
     case SeosTlsApi_Mode_RPC_CLIENT:
-        return SeosTlsRpcClient_write(self->context, data, dataSize);
+        return SeosTlsRpc_Client_write(self->context, data, dataSize);
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
     default:
         return SEOS_ERROR_NOT_SUPPORTED;
@@ -172,7 +172,7 @@ SeosTlsApi_read(
         return SeosTlsLib_read(self->context, data, dataSize);
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
     case SeosTlsApi_Mode_RPC_CLIENT:
-        return SeosTlsRpcClient_read(self->context, data, dataSize);
+        return SeosTlsRpc_Client_read(self->context, data, dataSize);
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
     default:
         return SEOS_ERROR_NOT_SUPPORTED;
@@ -196,7 +196,7 @@ SeosTlsApi_reset(
         return SeosTlsLib_reset(self->context);
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
     case SeosTlsApi_Mode_RPC_CLIENT:
-        return SeosTlsRpcClient_reset(self->context);
+        return SeosTlsRpc_Client_reset(self->context);
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
     default:
         return SEOS_ERROR_NOT_SUPPORTED;

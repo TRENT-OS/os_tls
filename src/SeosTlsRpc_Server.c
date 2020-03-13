@@ -5,12 +5,12 @@
 #if defined(SEOS_TLS_WITH_RPC_SERVER)
 
 #include "SeosTlsLib.h"
-#include "SeosTlsRpcServer.h"
+#include "SeosTlsRpc_Server.h"
 
 #include <string.h>
 #include <stdlib.h>
 
-struct SeosTlsRpcServer
+struct SeosTlsRpc_Server
 {
     SeosTlsLib* library;
     void* dataport;
@@ -23,7 +23,7 @@ struct SeosTlsRpcServer
  * respective contexts.
  */
 extern SeosTlsApi*
-SeosTlsRpcServer_getSeosTlsApi(
+SeosTlsRpc_Server_getSeosTlsApi(
     void);
 
 // This is not exposed via the header
@@ -34,7 +34,7 @@ SeosTlsApi_getServer(
 // Get SeosTlsRpcServer context from API
 #define GET_SELF(s) {                                           \
     SeosTlsApi *a;                                              \
-    if (((a = SeosTlsRpcServer_getSeosTlsApi()) == NULL) ||     \
+    if (((a = SeosTlsRpc_Server_getSeosTlsApi()) == NULL) ||    \
         ((s = SeosTlsApi_getServer(a)) == NULL) )               \
     {                                                           \
         return SEOS_ERROR_INVALID_PARAMETER;                    \
@@ -47,11 +47,11 @@ SeosTlsApi_getServer(
 // Server functions ------------------------------------------------------------
 
 seos_err_t
-SeosTlsRpcServer_init(
-    SeosTlsRpcServer**             self,
-    const SeosTlsRpcServer_Config* cfg)
+SeosTlsRpc_Server_init(
+    SeosTlsRpc_Server**             self,
+    const SeosTlsRpc_Server_Config* cfg)
 {
-    SeosTlsRpcServer* svr;
+    SeosTlsRpc_Server* svr;
     seos_err_t err;
 
     if (NULL == self || NULL == cfg)
@@ -59,13 +59,13 @@ SeosTlsRpcServer_init(
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    if ((svr = malloc(sizeof(SeosTlsRpcServer))) == NULL)
+    if ((svr = malloc(sizeof(SeosTlsRpc_Server))) == NULL)
     {
         return SEOS_ERROR_INSUFFICIENT_SPACE;
     }
 
     *self = svr;
-    memset(svr, 0, sizeof(SeosTlsRpcServer));
+    memset(svr, 0, sizeof(SeosTlsRpc_Server));
     svr->dataport = cfg->dataport;
 
     // We need an instance of the library for the server to work with
@@ -78,8 +78,8 @@ SeosTlsRpcServer_init(
 }
 
 seos_err_t
-SeosTlsRpcServer_free(
-    SeosTlsRpcServer* self)
+SeosTlsRpc_Server_free(
+    SeosTlsRpc_Server* self)
 {
     seos_err_t err;
 
@@ -97,40 +97,40 @@ SeosTlsRpcServer_free(
 // RPC functions ---------------------------------------------------------------
 
 seos_err_t
-SeosTlsRpcServer_handshake(
+SeosTlsRpc_Server_handshake(
     void)
 {
-    SeosTlsRpcServer* self;
+    SeosTlsRpc_Server* self;
 
     GET_SELF(self);
     return SeosTlsLib_handshake(self->library);
 }
 
 seos_err_t
-SeosTlsRpcServer_write(
-    size_t                  dataSize)
+SeosTlsRpc_Server_write(
+    size_t dataSize)
 {
-    SeosTlsRpcServer* self;
+    SeosTlsRpc_Server* self;
 
     GET_SELF(self);
     return SeosTlsLib_write(self->library, self->dataport, dataSize);
 }
 
 seos_err_t
-SeosTlsRpcServer_read(
-    size_t*                 dataSize)
+SeosTlsRpc_Server_read(
+    size_t* dataSize)
 {
-    SeosTlsRpcServer* self;
+    SeosTlsRpc_Server* self;
 
     GET_SELF(self);
     return SeosTlsLib_read(self->library, self->dataport, dataSize);
 }
 
 seos_err_t
-SeosTlsRpcServer_reset(
+SeosTlsRpc_Server_reset(
     void)
 {
-    SeosTlsRpcServer* self;
+    SeosTlsRpc_Server* self;
 
     GET_SELF(self);
     return SeosTlsLib_reset(self->library);

@@ -19,8 +19,6 @@
 set(SHARED_LIB_SOURCES
     "src/SeosTlsApi.c"
     "src/SeosTlsLib.c"
-    "src/SeosTlsRpcClient.c"
-    "src/SeosTlsRpcServer.c"
 )
 
 # These are the 3rd party sources, holding the actual algorithms
@@ -116,7 +114,7 @@ project(seos_tls_with_rpc_client C)
 
 add_library(${PROJECT_NAME} STATIC
     ${SHARED_LIB_SOURCES}
-    "src/SeosTlsRpcClient.c"
+    "src/SeosTlsRpc_Client.c"
     ${MBEDTLS_SOURCES}
 )
 
@@ -152,7 +150,7 @@ project(seos_tls_with_rpc_server C)
 
 add_library(${PROJECT_NAME} STATIC
     ${SHARED_LIB_SOURCES}
-    "src/SeosTlsRpcServer.c"
+    "src/SeosTlsRpc_Server.c"
     ${MBEDTLS_SOURCES}
 )
 
