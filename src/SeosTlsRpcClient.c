@@ -12,7 +12,6 @@
 
 struct SeosTlsRpcClient
 {
-    SeosTlsRpcServer_Handle handle;
     void* dataport;
 };
 
@@ -27,7 +26,7 @@ SeosTlsRpcClient_init(
 {
     SeosTlsRpcClient* cli;
 
-    if (NULL == self || NULL == cfg || NULL == cfg->dataport || NULL == cfg->handle)
+    if (NULL == self || NULL == cfg || NULL == cfg->dataport)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
@@ -39,7 +38,6 @@ SeosTlsRpcClient_init(
 
     *self = cli;
     memset(cli, 0, sizeof(SeosTlsRpcClient));
-    cli->handle     = cfg->handle;
     cli->dataport   = cfg->dataport;
 
     return SEOS_SUCCESS;
@@ -70,7 +68,7 @@ SeosTlsRpcClient_handshake(
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    return SeosTlsRpcServer_handshake(self->handle);
+    return SeosTlsRpcServer_handshake();
 }
 
 seos_err_t
@@ -90,7 +88,7 @@ SeosTlsRpcClient_write(
 
     memcpy(self->dataport, data, dataSize);
 
-    return SeosTlsRpcServer_write(self->handle, dataSize);
+    return SeosTlsRpcServer_write(dataSize);
 }
 
 seos_err_t
@@ -106,7 +104,7 @@ SeosTlsRpcClient_read(
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    if ((rc = SeosTlsRpcServer_read(self->handle, dataSize)) == SEOS_SUCCESS)
+    if ((rc = SeosTlsRpcServer_read(dataSize)) == SEOS_SUCCESS)
     {
         if (*dataSize > PAGE_SIZE)
         {
@@ -130,7 +128,7 @@ SeosTlsRpcClient_reset(
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    return SeosTlsRpcServer_reset(self->handle);
+    return SeosTlsRpcServer_reset();
 }
 
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */

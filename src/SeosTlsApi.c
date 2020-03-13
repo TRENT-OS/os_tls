@@ -204,3 +204,17 @@ SeosTlsApi_reset(
 
     return SEOS_ERROR_GENERIC;
 }
+
+void*
+SeosTlsApi_getServer(
+    SeosTlsApiH self)
+{
+    return (NULL == self) ? NULL : self->context;
+}
+
+SeosTlsApi_Mode
+SeosTlsApi_getMode(
+    SeosTlsApiH self)
+{
+    return (NULL == self) ? SeosTlsApi_Mode_NONE : self->mode;
+}

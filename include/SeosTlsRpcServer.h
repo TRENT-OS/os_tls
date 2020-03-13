@@ -15,21 +15,19 @@ SeosTlsRpcServer_init(
 
 seos_err_t
 SeosTlsRpcServer_handshake(
-    SeosTlsRpcServer_Handle handle);
+    void);
 
 seos_err_t
 SeosTlsRpcServer_write(
-    SeosTlsRpcServer_Handle handle,
-    size_t                  dataSize);
+    size_t dataSize);
 
 seos_err_t
 SeosTlsRpcServer_read(
-    SeosTlsRpcServer_Handle handle,
-    size_t*                 dataSize);
+    size_t* dataSize);
 
 seos_err_t
 SeosTlsRpcServer_reset(
-    SeosTlsRpcServer_Handle handle);
+    void);
 
 seos_err_t
 SeosTlsRpcServer_free(

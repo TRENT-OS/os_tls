@@ -16,7 +16,33 @@ struct SeosTlsRpcServer
     void* dataport;
 };
 
-// Private static functions ----------------------------------------------------
+/**
+ * The component hosting the SeosTlsApi in RPC_SERVER mode needs to implement
+ * a function to provide the server with its client specific context.
+ * This way, it is up to the component to handle multiple clients and their
+ * respective contexts.
+ */
+extern SeosTlsApi*
+SeosTlsRpcServer_getSeosTlsApi(
+    void);
+
+// This is not exposed via the header
+void*
+SeosTlsApi_getServer(
+    SeosTlsApi* api);
+
+// Get SeosTlsRpcServer context from API
+#define GET_SELF(s) {                                           \
+    SeosTlsApi *a;                                              \
+    if (((a = SeosTlsRpcServer_getSeosTlsApi()) == NULL) ||     \
+        ((s = SeosTlsApi_getServer(a)) == NULL) )               \
+    {                                                           \
+        return SEOS_ERROR_INVALID_PARAMETER;                    \
+    }                                                           \
+    if (SeosTlsApi_Mode_RPC_SERVER != SeosTlsApi_getMode(a)) {  \
+        return SEOS_ERROR_INVALID_STATE;                        \
+    }                                                           \
+}
 
 // Server functions ------------------------------------------------------------
 
@@ -72,55 +98,41 @@ SeosTlsRpcServer_free(
 
 seos_err_t
 SeosTlsRpcServer_handshake(
-    SeosTlsRpcServer_Handle handle)
+    void)
 {
-    SeosTlsRpcServer* self = handle->context;
-    if (handle->mode != SeosTlsApi_Mode_RPC_SERVER)
-    {
-        return SEOS_ERROR_OPERATION_DENIED;
-    }
+    SeosTlsRpcServer* self;
 
+    GET_SELF(self);
     return SeosTlsLib_handshake(self->library);
 }
 
 seos_err_t
 SeosTlsRpcServer_write(
-    SeosTlsRpcServer_Handle handle,
     size_t                  dataSize)
 {
-    SeosTlsRpcServer* self = handle->context;
-    if (handle->mode != SeosTlsApi_Mode_RPC_SERVER)
-    {
-        return SEOS_ERROR_OPERATION_DENIED;
-    }
+    SeosTlsRpcServer* self;
 
+    GET_SELF(self);
     return SeosTlsLib_write(self->library, self->dataport, dataSize);
 }
 
 seos_err_t
 SeosTlsRpcServer_read(
-    SeosTlsRpcServer_Handle handle,
     size_t*                 dataSize)
 {
-    SeosTlsRpcServer* self = handle->context;
-    if (handle->mode != SeosTlsApi_Mode_RPC_SERVER)
-    {
-        return SEOS_ERROR_OPERATION_DENIED;
-    }
+    SeosTlsRpcServer* self;
 
+    GET_SELF(self);
     return SeosTlsLib_read(self->library, self->dataport, dataSize);
 }
 
 seos_err_t
 SeosTlsRpcServer_reset(
-    SeosTlsRpcServer_Handle handle)
+    void)
 {
-    SeosTlsRpcServer* self = handle->context;
-    if (handle->mode != SeosTlsApi_Mode_RPC_SERVER)
-    {
-        return SEOS_ERROR_OPERATION_DENIED;
-    }
+    SeosTlsRpcServer* self;
 
+    GET_SELF(self);
     return SeosTlsLib_reset(self->library);
 }
 
