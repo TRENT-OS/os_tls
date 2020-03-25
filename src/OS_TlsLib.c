@@ -64,8 +64,8 @@ getRndBytes(
     unsigned char* buf,
     size_t         len)
 {
-    return SeosCryptoApi_Rng_getBytes(ctx, 0, (void*) buf,
-                                      len) == SEOS_SUCCESS ? 0 : 1;
+    return OS_CryptoRng_getBytes(ctx, 0, (void*) buf,
+                                 len) == SEOS_SUCCESS ? 0 : 1;
 }
 
 static inline size_t
@@ -199,13 +199,13 @@ validatePolicy(
         }
     }
 
-    if (checkRSA && ((policy->rsaMinBits > (SeosCryptoApi_Key_SIZE_RSA_MAX * 8)) ||
-                     (policy->rsaMinBits < (SeosCryptoApi_Key_SIZE_RSA_MIN * 8))))
+    if (checkRSA && ((policy->rsaMinBits > (OS_CryptoKey_SIZE_RSA_MAX * 8)) ||
+                     (policy->rsaMinBits < (OS_CryptoKey_SIZE_RSA_MIN * 8))))
     {
         return SEOS_ERROR_NOT_SUPPORTED;
     }
-    if (checkDH && ((policy->dhMinBits > (SeosCryptoApi_Key_SIZE_DH_MAX * 8)) ||
-                    (policy->dhMinBits < (SeosCryptoApi_Key_SIZE_DH_MIN * 8))))
+    if (checkDH && ((policy->dhMinBits > (OS_CryptoKey_SIZE_DH_MAX * 8)) ||
+                    (policy->dhMinBits < (OS_CryptoKey_SIZE_DH_MIN * 8))))
     {
         return SEOS_ERROR_NOT_SUPPORTED;
     }
@@ -291,7 +291,7 @@ initImpl(
     // If we have debug, use internal logging function
     mbedtls_ssl_conf_dbg(&self->mbedtls.conf, logDebug, NULL);
 
-    // Use SeosCryptoLib_Rng for TLS
+    // Use OS_CryptoLibRng for TLS
     mbedtls_ssl_conf_rng(&self->mbedtls.conf, getRndBytes,
                          (void*) self->cfg.crypto.handle);
 
