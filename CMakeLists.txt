@@ -24,7 +24,7 @@ set(SHARED_LIB_SOURCES
 # These are the 3rd party sources, holding the actual algorithms
 set(MBEDTLS_SOURCES
     # This file includes the functions we have added
-    "3rdParty/mbedtls/library/seos.c"
+    "3rdParty/mbedtls/library/crypto.c"
     # Include the minimum of C files which we need here which are not already
     # compiled in as part of the crypto API
     "3rdParty/mbedtls/library/debug.c"

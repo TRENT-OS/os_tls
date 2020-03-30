@@ -7,7 +7,7 @@
 
 #define MBEDTLS_DEBUG_C
 
-#define USE_SEOS_CRYPTO
+#define USE_OS_CRYPTO
 
 // -----------------------------------------------------------------------------
 // Modules for seos_crypto_api
