@@ -17,8 +17,8 @@
 
 # These are the sources we ALWAYS compile, for all targets
 set(SHARED_LIB_SOURCES
-    "src/SeosTlsApi.c"
-    "src/SeosTlsLib.c"
+    "src/OS_Tls.c"
+    "src/OS_TlsLib.c"
 )
 
 # These are the 3rd party sources, holding the actual algorithms
@@ -99,7 +99,7 @@ target_compile_options(${PROJECT_NAME}
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC
-        "include"
+        "inc"
         "3rdParty/mbedtls/include"
 )
 
@@ -114,7 +114,7 @@ project(seos_tls_with_rpc_client C)
 
 add_library(${PROJECT_NAME} STATIC
     ${SHARED_LIB_SOURCES}
-    "src/SeosTlsRpc_Client.c"
+    "src/OS_TlsRpcClient.c"
     ${MBEDTLS_SOURCES}
 )
 
@@ -135,7 +135,7 @@ target_compile_options(${PROJECT_NAME}
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC
-        "include"
+        "inc"
         "3rdParty/mbedtls/include"
 )
 
@@ -150,7 +150,7 @@ project(seos_tls_with_rpc_server C)
 
 add_library(${PROJECT_NAME} STATIC
     ${SHARED_LIB_SOURCES}
-    "src/SeosTlsRpc_Server.c"
+    "src/OS_TlsRpcServer.c"
     ${MBEDTLS_SOURCES}
 )
 
@@ -171,7 +171,7 @@ target_compile_options(${PROJECT_NAME}
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC
-        "include"
+        "inc"
         "3rdParty/mbedtls/include"
 )
 

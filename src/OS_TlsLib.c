@@ -2,9 +2,9 @@
  * Copyright (C) 2019-2020, Hensoldt Cyber GmbH
  */
 
-#include "SeosTlsApi.h"
+#include "OS_Tls.h"
 
-#include "SeosTlsLib.h"
+#include "OS_TlsLib.h"
 
 #include "mbedtls/debug.h"
 #include "LibDebug/Debug.h"
@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct SeosTlsLib
+struct OS_TlsLib
 {
     bool open;
     struct mbedtls
@@ -23,8 +23,8 @@ struct SeosTlsLib
         mbedtls_x509_crt cert;
         mbedtls_x509_crt_profile certProfile;
     } mbedtls;
-    SeosTlsLib_Config cfg;
-    SeosTlsLib_Policy policy;
+    OS_TlsLib_Config_t cfg;
+    OS_TlsLib_Policy_t policy;
 };
 
 // Private static functions ----------------------------------------------------
@@ -78,10 +78,10 @@ getMinOf(
 
 static seos_err_t
 derivePolicy(
-    const SeosTlsLib_Config* cfg,
-    SeosTlsLib_Policy*       policy)
+    const OS_TlsLib_Config_t* cfg,
+    OS_TlsLib_Policy_t*       policy)
 {
-    memset(policy, 0, sizeof(SeosTlsLib_Policy));
+    memset(policy, 0, sizeof(OS_TlsLib_Policy_t));
     policy->dhMinBits  = 9999;
     policy->rsaMinBits = 9999;
 
@@ -93,14 +93,14 @@ derivePolicy(
         switch (cfg->crypto.cipherSuites[i])
         {
         // Careful, this is a FALLTHROUGH!
-        case SeosTlsLib_CipherSuite_DHE_RSA_WITH_AES_128_GCM_SHA256:
+        case OS_TlsLib_CIPHERSUITE_DHE_RSA_WITH_AES_128_GCM_SHA256:
             policy->dhMinBits   = getMinOf(policy->dhMinBits,  2048);
-        case SeosTlsLib_CipherSuite_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
+        case OS_TlsLib_CIPHERSUITE_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
             policy->rsaMinBits  = getMinOf(policy->rsaMinBits, 2048);
             policy->signatureDigests[policy->signatureDigestsLen++] =
-                SeosTlsLib_Digest_SHA256;
+                OS_TlsLib_DIGEST_SHA256;
             policy->sessionDigests[policy->sessionDigestsLen++]     =
-                SeosTlsLib_Digest_SHA256;
+                OS_TlsLib_DIGEST_SHA256;
             break;
         default:
             return SEOS_ERROR_NOT_SUPPORTED;
@@ -112,12 +112,12 @@ derivePolicy(
 
 static seos_err_t
 checkSuites(
-    const SeosTlsLib_CipherSuite* suites,
-    const size_t                  numSuites)
+    const OS_TlsLib_CipherSuite_t* suites,
+    const size_t                   numSuites)
 {
     size_t i;
 
-    if (numSuites <= 0 || numSuites > SeosTlsLib_MAX_CIPHERSUITES)
+    if (numSuites <= 0 || numSuites > OS_TlsLib_MAX_CIPHERSUITES)
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
@@ -126,8 +126,8 @@ checkSuites(
     {
         switch (suites[i])
         {
-        case SeosTlsLib_CipherSuite_DHE_RSA_WITH_AES_128_GCM_SHA256:
-        case SeosTlsLib_CipherSuite_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
+        case OS_TlsLib_CIPHERSUITE_DHE_RSA_WITH_AES_128_GCM_SHA256:
+        case OS_TlsLib_CIPHERSUITE_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
             break;
         default:
             return SEOS_ERROR_NOT_SUPPORTED;
@@ -139,28 +139,28 @@ checkSuites(
 
 static seos_err_t
 validatePolicy(
-    const SeosTlsLib_Config* cfg,
-    const SeosTlsLib_Policy* policy)
+    const OS_TlsLib_Config_t* cfg,
+    const OS_TlsLib_Policy_t* policy)
 {
     size_t i;
     bool checkDH, checkRSA;
 
     if (policy->sessionDigestsLen < 0
-        || policy->sessionDigestsLen > SeosTlsLib_MAX_DIGESTS ||
+        || policy->sessionDigestsLen > OS_TlsLib_MAX_DIGESTS ||
         policy->signatureDigestsLen < 0
-        || policy->signatureDigestsLen > SeosTlsLib_MAX_DIGESTS )
+        || policy->signatureDigestsLen > OS_TlsLib_MAX_DIGESTS )
     {
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
     // Check the session digests and signature digests
-    for (i = 0; i < SeosTlsLib_MAX_DIGESTS; i++)
+    for (i = 0; i < OS_TlsLib_MAX_DIGESTS; i++)
     {
         if (i < policy->sessionDigestsLen)
         {
             switch (policy->sessionDigests[i])
             {
-            case SeosTlsLib_Digest_SHA256:
+            case OS_TlsLib_DIGEST_SHA256:
                 break;
             default:
                 return SEOS_ERROR_NOT_SUPPORTED;
@@ -170,7 +170,7 @@ validatePolicy(
         {
             switch (policy->signatureDigests[i])
             {
-            case SeosTlsLib_Digest_SHA256:
+            case OS_TlsLib_DIGEST_SHA256:
                 break;
             default:
                 return SEOS_ERROR_NOT_SUPPORTED;
@@ -187,10 +187,10 @@ validatePolicy(
     {
         switch (cfg->crypto.cipherSuites[i])
         {
-        case SeosTlsLib_CipherSuite_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
+        case OS_TlsLib_CIPHERSUITE_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
             checkRSA = true;
             break;
-        case SeosTlsLib_CipherSuite_DHE_RSA_WITH_AES_128_GCM_SHA256:
+        case OS_TlsLib_CIPHERSUITE_DHE_RSA_WITH_AES_128_GCM_SHA256:
             checkRSA = true;
             checkDH  = true;
             break;
@@ -215,10 +215,10 @@ validatePolicy(
 
 static void
 setCertProfile(
-    const SeosTlsLib_Policy*      policy,
-    const SeosTlsLib_CipherSuite* suites,
-    const size_t                  suitesLen,
-    mbedtls_x509_crt_profile*     profile)
+    const OS_TlsLib_Policy_t*      policy,
+    const OS_TlsLib_CipherSuite_t* suites,
+    const size_t                   suitesLen,
+    mbedtls_x509_crt_profile*      profile)
 {
     size_t i;
 
@@ -228,8 +228,8 @@ setCertProfile(
     {
         switch (suites[i])
         {
-        case SeosTlsLib_CipherSuite_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
-        case SeosTlsLib_CipherSuite_DHE_RSA_WITH_AES_128_GCM_SHA256:
+        case OS_TlsLib_CIPHERSUITE_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
+        case OS_TlsLib_CIPHERSUITE_DHE_RSA_WITH_AES_128_GCM_SHA256:
             profile->allowed_pks |= MBEDTLS_X509_ID_FLAG(MBEDTLS_PK_RSA);
             break;
         default:
@@ -241,7 +241,7 @@ setCertProfile(
     {
         switch (policy->signatureDigests[i])
         {
-        case SeosTlsLib_Digest_SHA256:
+        case OS_TlsLib_DIGEST_SHA256:
             profile->allowed_mds |= MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA256 );
             break;
         default:
@@ -255,7 +255,7 @@ setCertProfile(
 
 static seos_err_t
 initImpl(
-    SeosTlsLib* self)
+    OS_TlsLib_t* self)
 {
     int rc;
 
@@ -295,7 +295,7 @@ initImpl(
     mbedtls_ssl_conf_rng(&self->mbedtls.conf, getRndBytes,
                          (void*) self->cfg.crypto.handle);
 
-    if (self->cfg.flags & SeosTlsLib_Flag_NO_VERIFY)
+    if (self->cfg.flags & OS_TlsLib_FLAG_NO_VERIFY)
     {
         // We need to have the option to disable cert verification, even though it
         // is not advisable
@@ -317,7 +317,7 @@ initImpl(
     }
 
     // Output levels: (0) none, (1) error, (2) + state change, (3) + informational
-    mbedtls_debug_set_threshold((self->cfg.flags & SeosTlsLib_Flag_DEBUG) ? 3 : 0);
+    mbedtls_debug_set_threshold((self->cfg.flags & OS_TlsLib_FLAG_DEBUG) ? 3 : 0);
 
     mbedtls_ssl_init(&self->mbedtls.ssl);
 
@@ -342,7 +342,7 @@ initImpl(
 err2:
     mbedtls_ssl_free(&self->mbedtls.ssl);
 err1:
-    if (!(self->cfg.flags & SeosTlsLib_Flag_NO_VERIFY))
+    if (!(self->cfg.flags & OS_TlsLib_FLAG_NO_VERIFY))
     {
         mbedtls_x509_crt_free(&self->mbedtls.cert);
     }
@@ -354,10 +354,10 @@ err0:
 
 static seos_err_t
 freeImpl(
-    SeosTlsLib* self)
+    OS_TlsLib_t* self)
 {
     mbedtls_ssl_free(&self->mbedtls.ssl);
-    if (!(self->cfg.flags & SeosTlsLib_Flag_NO_VERIFY))
+    if (!(self->cfg.flags & OS_TlsLib_FLAG_NO_VERIFY))
     {
         mbedtls_x509_crt_free(&self->mbedtls.cert);
     }
@@ -368,7 +368,7 @@ freeImpl(
 
 static seos_err_t
 handshakeImpl(
-    SeosTlsLib* self)
+    OS_TlsLib_t* self)
 {
     int rc;
 
@@ -396,7 +396,7 @@ handshakeImpl(
 
 static seos_err_t
 writeImpl(
-    SeosTlsLib*  self,
+    OS_TlsLib_t* self,
     const void*  data,
     const size_t dataSize)
 {
@@ -423,9 +423,9 @@ writeImpl(
 
 static seos_err_t
 readImpl(
-    SeosTlsLib* self,
-    void*       data,
-    size_t*     dataSize)
+    OS_TlsLib_t* self,
+    void*        data,
+    size_t*      dataSize)
 {
     int rc;
 
@@ -454,7 +454,7 @@ readImpl(
 
 static seos_err_t
 resetImpl(
-    SeosTlsLib* self)
+    OS_TlsLib_t* self)
 {
     return (mbedtls_ssl_session_reset(&self->mbedtls.ssl) == 0) ?
            SEOS_SUCCESS : SEOS_ERROR_ABORTED;
@@ -463,12 +463,12 @@ resetImpl(
 // Public functions ------------------------------------------------------------
 
 seos_err_t
-SeosTlsLib_init(
-    SeosTlsLib**             self,
-    const SeosTlsLib_Config* cfg)
+OS_TlsLib_init(
+    OS_TlsLib_t**             self,
+    const OS_TlsLib_Config_t* cfg)
 {
     seos_err_t err;
-    SeosTlsLib* lib;
+    OS_TlsLib_t* lib;
 
     if (NULL == self || NULL == cfg)
     {
@@ -490,7 +490,7 @@ SeosTlsLib_init(
         Debug_LOG_ERROR("Socket callbacks for send/recv are not set");
         return SEOS_ERROR_INVALID_PARAMETER;
     }
-    else if (!(cfg->flags & SeosTlsLib_Flag_NO_VERIFY) &&
+    else if (!(cfg->flags & OS_TlsLib_FLAG_NO_VERIFY) &&
              (strstr(cfg->crypto.caCert, "-----BEGIN CERTIFICATE-----") == NULL ||
               strstr(cfg->crypto.caCert, "-----END CERTIFICATE-----") == NULL) )
     {
@@ -498,14 +498,14 @@ SeosTlsLib_init(
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    if ((lib = malloc(sizeof(SeosTlsLib))) == NULL)
+    if ((lib = malloc(sizeof(OS_TlsLib_t))) == NULL)
     {
         return SEOS_ERROR_INSUFFICIENT_SPACE;
     }
 
     *self = lib;
-    memset(lib, 0, sizeof(SeosTlsLib));
-    memcpy(&lib->cfg, cfg, sizeof(SeosTlsLib_Config));
+    memset(lib, 0, sizeof(OS_TlsLib_t));
+    memcpy(&lib->cfg, cfg, sizeof(OS_TlsLib_Config_t));
 
     if (NULL == cfg->crypto.policy)
     {
@@ -538,8 +538,8 @@ SeosTlsLib_init(
 }
 
 seos_err_t
-SeosTlsLib_free(
-    SeosTlsLib* self)
+OS_TlsLib_free(
+    OS_TlsLib_t* self)
 {
     seos_err_t err;
 
@@ -555,8 +555,8 @@ SeosTlsLib_free(
 }
 
 seos_err_t
-SeosTlsLib_handshake(
-    SeosTlsLib* self)
+OS_TlsLib_handshake(
+    OS_TlsLib_t* self)
 {
     seos_err_t err;
 
@@ -576,8 +576,8 @@ SeosTlsLib_handshake(
 }
 
 seos_err_t
-SeosTlsLib_write(
-    SeosTlsLib*  self,
+OS_TlsLib_write(
+    OS_TlsLib_t* self,
     const void*  data,
     const size_t dataSize)
 {
@@ -594,10 +594,10 @@ SeosTlsLib_write(
 }
 
 seos_err_t
-SeosTlsLib_read(
-    SeosTlsLib* self,
-    void*       data,
-    size_t*     dataSize)
+OS_TlsLib_read(
+    OS_TlsLib_t* self,
+    void*        data,
+    size_t*      dataSize)
 {
     if (NULL == self || NULL == data || NULL == dataSize || 0 == *dataSize)
     {
@@ -612,8 +612,8 @@ SeosTlsLib_read(
 }
 
 seos_err_t
-SeosTlsLib_reset(
-    SeosTlsLib* self)
+OS_TlsLib_reset(
+    OS_TlsLib_t* self)
 {
     if (NULL == self)
     {
