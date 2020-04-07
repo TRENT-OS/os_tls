@@ -291,7 +291,7 @@ initImpl(
     // If we have debug, use internal logging function
     mbedtls_ssl_conf_dbg(&self->mbedtls.conf, logDebug, NULL);
 
-    // Use OS_CryptoLibRng for TLS
+    // Use internal RNG of Crypto API for TLS
     mbedtls_ssl_conf_rng(&self->mbedtls.conf, getRndBytes,
                          (void*) self->cfg.crypto.handle);
 
