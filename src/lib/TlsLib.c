@@ -42,6 +42,11 @@ logDebug(
     UNUSED_VAR(ctx);
     UNUSED_VAR(level);
 
+    if (level < 1 || level > 4)
+    {
+        return;
+    }
+
     size_t len_file_name = strlen(file);
     const size_t max_len_file = 16;
     bool is_short_file_name = (len_file_name <= max_len_file);
@@ -55,7 +60,23 @@ logDebug(
         line,
         str);
 
-    Debug_LOG_INFO("%s", msg);
+    // Translate mbedTLS level to appropriate debug output
+    switch (level)
+    {
+    case 1: // Error
+        Debug_LOG_ERROR("%s", msg);
+        break;
+    case 2: // State change
+    case 3: // Informational
+        Debug_LOG_INFO("%s", msg);
+        break;
+    case 4: // Verbose
+        Debug_LOG_DEBUG("%s", msg);
+        break;
+    default:
+        // Do nothing
+        break;
+    }
 }
 
 static int
