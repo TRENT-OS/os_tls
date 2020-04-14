@@ -4,9 +4,9 @@
 
 #include "OS_Tls.h"
 
-#include "OS_TlsLib.h"
-#include "OS_TlsRpcServer.h"
-#include "OS_TlsRpcClient.h"
+#include "lib/TlsLib.h"
+#include "rpc/TlsLibServer.h"
+#include "rpc/TlsLibClient.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,18 +42,18 @@ OS_Tls_init(
     switch (cfg->mode)
     {
     case OS_Tls_MODE_LIBRARY:
-        err = OS_TlsLib_init((OS_TlsLib_t**) &api->context, &cfg->config.library);
+        err = TlsLib_init((TlsLib_t**) &api->context, &cfg->config.library);
         break;
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
-    case OS_Tls_MODE_RPC_CLIENT:
-        err = OS_TlsRpcClient_init((OS_TlsRpcClient_t**) &api->context,
-                                   &cfg->config.client);
+    case OS_Tls_MODE_CLIENT:
+        err = TlsLibClient_init((TlsLibClient_t**) &api->context,
+                                &cfg->config.client);
         break;
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
 #if defined(SEOS_TLS_WITH_RPC_SERVER)
-    case OS_Tls_MODE_RPC_SERVER:
-        err = OS_TlsRpcServer_init((OS_TlsRpcServer_t**) &api->context,
-                                   &cfg->config.server);
+    case OS_Tls_MODE_SERVER:
+        err = TlsLibServer_init((TlsLibServer_t**) &api->context,
+                                &cfg->config.server);
         break;
 #endif /* SEOS_TLS_WITH_RPC_SERVER */
     default:
@@ -84,16 +84,16 @@ OS_Tls_free(
     switch (self->mode)
     {
     case OS_Tls_MODE_LIBRARY:
-        err = OS_TlsLib_free(self->context);
+        err = TlsLib_free(self->context);
         break;
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
-    case OS_Tls_MODE_RPC_CLIENT:
-        err = OS_TlsRpcClient_free(self->context);
+    case OS_Tls_MODE_CLIENT:
+        err = TlsLibClient_free(self->context);
         break;
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
 #if defined(SEOS_TLS_WITH_RPC_SERVER)
-    case OS_Tls_MODE_RPC_SERVER:
-        err = OS_TlsRpcServer_free(self->context);
+    case OS_Tls_MODE_SERVER:
+        err = TlsLibServer_free(self->context);
         break;
 #endif /* SEOS_TLS_WITH_RPC_SERVER */
     default:
@@ -117,10 +117,10 @@ OS_Tls_handshake(
     switch (self->mode)
     {
     case OS_Tls_MODE_LIBRARY:
-        return OS_TlsLib_handshake(self->context);
+        return TlsLib_handshake(self->context);
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
-    case OS_Tls_MODE_RPC_CLIENT:
-        return OS_TlsRpcClient_handshake(self->context);
+    case OS_Tls_MODE_CLIENT:
+        return TlsLibClient_handshake(self->context);
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
     default:
         return SEOS_ERROR_NOT_SUPPORTED;
@@ -143,10 +143,10 @@ OS_Tls_write(
     switch (self->mode)
     {
     case OS_Tls_MODE_LIBRARY:
-        return OS_TlsLib_write(self->context, data, dataSize);
+        return TlsLib_write(self->context, data, dataSize);
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
-    case OS_Tls_MODE_RPC_CLIENT:
-        return OS_TlsRpcClient_write(self->context, data, dataSize);
+    case OS_Tls_MODE_CLIENT:
+        return TlsLibClient_write(self->context, data, dataSize);
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
     default:
         return SEOS_ERROR_NOT_SUPPORTED;
@@ -169,10 +169,10 @@ OS_Tls_read(
     switch (self->mode)
     {
     case OS_Tls_MODE_LIBRARY:
-        return OS_TlsLib_read(self->context, data, dataSize);
+        return TlsLib_read(self->context, data, dataSize);
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
-    case OS_Tls_MODE_RPC_CLIENT:
-        return OS_TlsRpcClient_read(self->context, data, dataSize);
+    case OS_Tls_MODE_CLIENT:
+        return TlsLibClient_read(self->context, data, dataSize);
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
     default:
         return SEOS_ERROR_NOT_SUPPORTED;
@@ -193,10 +193,10 @@ OS_Tls_reset(
     switch (self->mode)
     {
     case OS_Tls_MODE_LIBRARY:
-        return OS_TlsLib_reset(self->context);
+        return TlsLib_reset(self->context);
 #if defined(SEOS_TLS_WITH_RPC_CLIENT)
-    case OS_Tls_MODE_RPC_CLIENT:
-        return OS_TlsRpcClient_reset(self->context);
+    case OS_Tls_MODE_CLIENT:
+        return TlsLibClient_reset(self->context);
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
     default:
         return SEOS_ERROR_NOT_SUPPORTED;

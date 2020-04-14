@@ -4,15 +4,15 @@
 
 #if defined(SEOS_TLS_WITH_RPC_SERVER)
 
-#include "OS_TlsLib.h"
-#include "OS_TlsRpcServer.h"
+#include "lib/TlsLib.h"
+#include "rpc/TlsLibServer.h"
 
 #include <string.h>
 #include <stdlib.h>
 
-struct OS_TlsRpcServer
+struct TlsLibServer
 {
-    OS_TlsLib_t* library;
+    TlsLib_t* library;
     void* dataport;
 };
 
@@ -23,7 +23,7 @@ struct OS_TlsRpcServer
  * respective contexts.
  */
 extern OS_Tls_Handle_t
-OS_TlsRpcServer_getTls(
+TlsLibServer_getTls(
     void);
 
 // This is not exposed via the header
@@ -34,12 +34,12 @@ OS_Tls_getServer(
 // Get SeosTlsRpcServer context from API
 #define GET_SELF(s) {                                   \
     OS_Tls_t *a;                                        \
-    if (((a = OS_TlsRpcServer_getTls()) == NULL) ||     \
+    if (((a = TlsLibServer_getTls()) == NULL) ||        \
         ((s = OS_Tls_getServer(a)) == NULL) )           \
     {                                                   \
         return SEOS_ERROR_INVALID_PARAMETER;            \
     }                                                   \
-    if (OS_Tls_MODE_RPC_SERVER != OS_Tls_getMode(a)) {  \
+    if (OS_Tls_MODE_SERVER != OS_Tls_getMode(a)) {      \
         return SEOS_ERROR_INVALID_STATE;                \
     }                                                   \
 }
@@ -47,11 +47,11 @@ OS_Tls_getServer(
 // Server functions ------------------------------------------------------------
 
 seos_err_t
-OS_TlsRpcServer_init(
-    OS_TlsRpcServer_t**             self,
-    const OS_TlsRpcServer_Config_t* cfg)
+TlsLibServer_init(
+    TlsLibServer_t**             self,
+    const TlsLibServer_Config_t* cfg)
 {
-    OS_TlsRpcServer_t* svr;
+    TlsLibServer_t* svr;
     seos_err_t err;
 
     if (NULL == self || NULL == cfg)
@@ -59,17 +59,17 @@ OS_TlsRpcServer_init(
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    if ((svr = malloc(sizeof(OS_TlsRpcServer_t))) == NULL)
+    if ((svr = malloc(sizeof(TlsLibServer_t))) == NULL)
     {
         return SEOS_ERROR_INSUFFICIENT_SPACE;
     }
 
     *self = svr;
-    memset(svr, 0, sizeof(OS_TlsRpcServer_t));
+    memset(svr, 0, sizeof(TlsLibServer_t));
     svr->dataport = cfg->dataport;
 
     // We need an instance of the library for the server to work with
-    if ((err = OS_TlsLib_init(&svr->library, &cfg->library)) != SEOS_SUCCESS)
+    if ((err = TlsLib_init(&svr->library, &cfg->library)) != SEOS_SUCCESS)
     {
         free(svr);
     }
@@ -78,8 +78,8 @@ OS_TlsRpcServer_init(
 }
 
 seos_err_t
-OS_TlsRpcServer_free(
-    OS_TlsRpcServer_t* self)
+TlsLibServer_free(
+    TlsLibServer_t* self)
 {
     seos_err_t err;
 
@@ -88,7 +88,7 @@ OS_TlsRpcServer_free(
         return SEOS_ERROR_INVALID_PARAMETER;
     }
 
-    err = OS_TlsLib_free(self->library);
+    err = TlsLib_free(self->library);
     free(self);
 
     return err;
@@ -97,43 +97,43 @@ OS_TlsRpcServer_free(
 // RPC functions ---------------------------------------------------------------
 
 seos_err_t
-OS_TlsRpcServer_handshake(
+TlsLibServer_handshake(
     void)
 {
-    OS_TlsRpcServer_t* self;
+    TlsLibServer_t* self;
 
     GET_SELF(self);
-    return OS_TlsLib_handshake(self->library);
+    return TlsLib_handshake(self->library);
 }
 
 seos_err_t
-OS_TlsRpcServer_write(
+TlsLibServer_write(
     size_t dataSize)
 {
-    OS_TlsRpcServer_t* self;
+    TlsLibServer_t* self;
 
     GET_SELF(self);
-    return OS_TlsLib_write(self->library, self->dataport, dataSize);
+    return TlsLib_write(self->library, self->dataport, dataSize);
 }
 
 seos_err_t
-OS_TlsRpcServer_read(
+TlsLibServer_read(
     size_t* dataSize)
 {
-    OS_TlsRpcServer_t* self;
+    TlsLibServer_t* self;
 
     GET_SELF(self);
-    return OS_TlsLib_read(self->library, self->dataport, dataSize);
+    return TlsLib_read(self->library, self->dataport, dataSize);
 }
 
 seos_err_t
-OS_TlsRpcServer_reset(
+TlsLibServer_reset(
     void)
 {
-    OS_TlsRpcServer_t* self;
+    TlsLibServer_t* self;
 
     GET_SELF(self);
-    return OS_TlsLib_reset(self->library);
+    return TlsLib_reset(self->library);
 }
 
 #endif /* SEOS_TLS_WITH_RPC_SERVER */

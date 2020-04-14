@@ -18,7 +18,7 @@
 # These are the sources we ALWAYS compile, for all targets
 set(SHARED_LIB_SOURCES
     "src/OS_Tls.c"
-    "src/OS_TlsLib.c"
+    "src/lib/TlsLib.c"
 )
 
 # These are the 3rd party sources, holding the actual algorithms
@@ -114,7 +114,7 @@ project(seos_tls_with_rpc_client C)
 
 add_library(${PROJECT_NAME} STATIC
     ${SHARED_LIB_SOURCES}
-    "src/OS_TlsRpcClient.c"
+    "src/rpc/TlsLibClient.c"
     ${MBEDTLS_SOURCES}
 )
 
@@ -150,7 +150,7 @@ project(seos_tls_with_rpc_server C)
 
 add_library(${PROJECT_NAME} STATIC
     ${SHARED_LIB_SOURCES}
-    "src/OS_TlsRpcServer.c"
+    "src/rpc/TlsLibServer.c"
     ${MBEDTLS_SOURCES}
 )
 
