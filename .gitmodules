@@ -1,3 +1,0 @@
-[submodule "3rdParty/mbedtls"]
-	path = 3rdParty/mbedtls
-	url = ../../ext/mbedtls.git
