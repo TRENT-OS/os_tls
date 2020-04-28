@@ -52,23 +52,6 @@ set(PUBLIC_TARGET_COMPILE_OTIONS
     -Wall
 )
 
-# when building for the x64 architecture, some warnings are reported (i.e. printf
-# formatting) that the code is full of, and that are otherwise not reported, so as
-# a quick fix we don't add -Werror when compiling in this situation
-if(NO_KERNEL_BUILD)
-    # since PAGE_SIZE is normally defined as part of musllibc (which is missing
-    # here) we have to define it
-    set(PRIVATE_TARGET_COMPILE_DEFINITIONS
-        ${PRIVATE_TARGET_COMPILE_DEFINITIONS}
-        PAGE_SIZE=${PAGE_SIZE_VALUE}
-    )
-else()
-    set(PUBLIC_TARGET_COMPILE_OTIONS
-        ${PUBLIC_TARGET_COMPILE_OTIONS}
-        -Werror
-    )
-endif(NO_KERNEL_BUILD)
-
 if (ENABLE_LINT)
     set(CMAKE_C_CPPCHECK "cppcheck;--enable=warning;--inline-suppr")
     set(CMAKE_C_CLANG_TIDY "clang-tidy;-checks=*")
