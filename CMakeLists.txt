@@ -15,40 +15,27 @@
 #    to serve RPC requests from a TLS API RPC client.
 #
 
+cmake_minimum_required(VERSION 3.13.0)
+
+# enable new behavior introduced in CMake 3.13, where relative paths will be
+# converted into absolute paths in target_sources(INTERFACE ....)
+cmake_policy(SET CMP0076 NEW)
+
+# We need to build 3rdparty/mbedtls for this and would like to avoid
+# all users of SEOS_CRYPTO to include this as well, so we do it here
+seos_use_libs(
+    3RDPARTY_MBEDTLS
+)
+
 # These are the sources we ALWAYS compile, for all targets
-set(SHARED_LIB_SOURCES
+set(SOURCES
     "src/OS_Tls.c"
     "src/lib/TlsLib.c"
 )
 
-# These are the 3rd party sources, holding the actual algorithms
-set(MBEDTLS_SOURCES
-    # This file includes the functions we have added
-    "3rdParty/mbedtls/library/crypto.c"
-    # Include the minimum of C files which we need here which are not already
-    # compiled in as part of the crypto API
-    "3rdParty/mbedtls/library/debug.c"
-    "3rdParty/mbedtls/library/pk.c"
-    "3rdParty/mbedtls/library/pk_wrap.c"
-    "3rdParty/mbedtls/library/pkparse.c"
-    "3rdParty/mbedtls/library/ssl_ciphersuites.c"
-    "3rdParty/mbedtls/library/ssl_cli.c"
-    "3rdParty/mbedtls/library/ssl_tls.c"
-    "3rdParty/mbedtls/library/x509.c"
-    "3rdParty/mbedtls/library/pem.c"
-    "3rdParty/mbedtls/library/base64.c"
-    "3rdParty/mbedtls/library/x509_crt.c"
-)
+set(COMPILE_DEFINITIONS)
 
-set(PRIVATE_TARGET_COMPILE_DEFINITIONS
-    MBEDTLS_CONFIG_FILE="${CMAKE_CURRENT_SOURCE_DIR}/configs/MbedTLS_Config.h"
-)
-
-set(PUBLIC_TARGET_COMPILE_DEFINITIONS)
-
-set(PRIVATE_TARGET_COMPILE_OTIONS)
-
-set(PUBLIC_TARGET_COMPILE_OTIONS
+set(COMPILE_OTIONS
     -Wall
 )
 
@@ -61,106 +48,103 @@ endif()
 
 project(seos_tls C)
 
-add_library(${PROJECT_NAME} STATIC
-    ${SHARED_LIB_SOURCES}
-    ${MBEDTLS_SOURCES}
+add_library(${PROJECT_NAME} INTERFACE)
+
+target_sources(${PROJECT_NAME}
+    INTERFACE
+        ${SOURCES}
 )
 
 target_compile_definitions(${PROJECT_NAME}
-    PUBLIC
-        ${PUBLIC_TARGET_COMPILE_DEFINITIONS}
-    PRIVATE
-        ${PRIVATE_TARGET_COMPILE_DEFINITIONS}
+    INTERFACE
+        ${COMPILE_DEFINITIONS}
 )
 
 target_compile_options(${PROJECT_NAME}
-    PUBLIC
-        ${PUBLIC_TARGET_COMPILE_OPTIONS}
-    PRIVATE
-        ${PRIVATE_TARGET_COMPILE_OPTIONS}
+    INTERFACE
+        ${COMPILE_OTIONS}
 )
 
 target_include_directories(${PROJECT_NAME}
-    PUBLIC
+    INTERFACE
         "inc"
-        "3rdParty/mbedtls/include"
 )
 
 target_link_libraries(${PROJECT_NAME}
-    seos_core_api
-    seos_libs
+    INTERFACE
+        3rdparty_mbedtls
+        seos_core_api
+        seos_libs
 )
 
 #------------------------------------------------------------------------------
 
 project(seos_tls_with_rpc_client C)
 
-add_library(${PROJECT_NAME} STATIC
-    ${SHARED_LIB_SOURCES}
-    "src/rpc/TlsLibClient.c"
-    ${MBEDTLS_SOURCES}
+add_library(${PROJECT_NAME} INTERFACE)
+
+target_sources(${PROJECT_NAME}
+    INTERFACE
+        ${SOURCES}
+        "src/rpc/TlsLibClient.c"
 )
 
 target_compile_definitions(${PROJECT_NAME}
-    PUBLIC
-        ${PUBLIC_TARGET_COMPILE_DEFINITIONS}
-    PRIVATE
-        ${PRIVATE_TARGET_COMPILE_DEFINITIONS}
+    INTERFACE
+        ${COMPILE_DEFINITIONS}
 )
 
 target_compile_options(${PROJECT_NAME}
-    PUBLIC
-        ${PUBLIC_TARGET_COMPILE_OPTIONS}
-    PRIVATE
-        ${PRIVATE_TARGET_COMPILE_OPTIONS}
+    INTERFACE
+        ${COMPILE_OPTIONS}
         -DSEOS_TLS_WITH_RPC_CLIENT
 )
 
 target_include_directories(${PROJECT_NAME}
-    PUBLIC
+    INTERFACE
         "inc"
-        "3rdParty/mbedtls/include"
 )
 
 target_link_libraries(${PROJECT_NAME}
-    seos_core_api
-    seos_libs
+    INTERFACE
+        3rdparty_mbedtls
+        seos_core_api
+        seos_libs
 )
 
 #------------------------------------------------------------------------------
 
 project(seos_tls_with_rpc_server C)
 
-add_library(${PROJECT_NAME} STATIC
-    ${SHARED_LIB_SOURCES}
-    "src/rpc/TlsLibServer.c"
-    ${MBEDTLS_SOURCES}
+add_library(${PROJECT_NAME} INTERFACE)
+
+target_sources(${PROJECT_NAME}
+    INTERFACE
+        ${SOURCES}
+        "src/rpc/TlsLibServer.c"
 )
 
 target_compile_definitions(${PROJECT_NAME}
-    PUBLIC
-        ${PUBLIC_TARGET_COMPILE_DEFINITIONS}
-    PRIVATE
-        ${PRIVATE_TARGET_COMPILE_DEFINITIONS}
+    INTERFACE
+        ${COMPILE_DEFINITIONS}
 )
 
 target_compile_options(${PROJECT_NAME}
-    PUBLIC
-        ${PUBLIC_TARGET_COMPILE_OPTIONS}
-    PRIVATE
-        ${PRIVATE_TARGET_COMPILE_OPTIONS}
+    INTERFACE
+        ${COMPILE_OPTIONS}
         -DSEOS_TLS_WITH_RPC_SERVER
 )
 
 target_include_directories(${PROJECT_NAME}
-    PUBLIC
+    INTERFACE
         "inc"
-        "3rdParty/mbedtls/include"
 )
 
 target_link_libraries(${PROJECT_NAME}
-    seos_core_api
-    seos_libs
+    INTERFACE
+        3rdparty_mbedtls
+        seos_core_api
+        seos_libs
 )
 
 #------------------------------------------------------------------------------
