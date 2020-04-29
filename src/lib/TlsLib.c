@@ -533,7 +533,7 @@ TlsLib_init(
         // If no policy is given, derive all the policy parameters based on the
         // WEAKEST ciphersuite given by the user.
         derivePolicy(&lib->cfg, &lib->policy);
-        Debug_LOG_INFO("Derived policy with %i/%i digests and rsaMinBits=%i, dhMinBits=%i",
+        Debug_LOG_INFO("Derived policy with %zu/%zu digests and rsaMinBits=%zu, dhMinBits=%zu",
                        lib->policy.sessionDigestsLen, lib->policy.signatureDigestsLen,
                        lib->policy.rsaMinBits, lib->policy.dhMinBits);
     }
