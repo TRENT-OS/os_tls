@@ -14,11 +14,23 @@
 #    to instantiate the TLS API as RPC server easily, which can then be used
 #    to serve RPC requests from a TLS API RPC client.
 #
+# Additionally, we have a variant of all of these targets which uses the TlsLibPb.c file,
+# which holds the PointBlank implementation of TLS: 
+# - SEOS_TLS_PB
+# - SEOS_TLS_PB_WITH_RPC_CLIENT
+# - SEOS_TLS_PB_WITH_RPC_SEVER
+#
 
 # These are the sources we ALWAYS compile, for all targets
 set(SHARED_LIB_SOURCES
     "src/OS_Tls.c"
     "src/OS_TlsLib.c"
+)
+
+# These are the sources we ALWAYS compile, for all PB targets
+set(SHARED_LIB_PB_SOURCES
+    "src/OS_Tls.c"
+    "src/OS_TlsLibPb.c"
 )
 
 # These are the 3rd party sources, holding the actual algorithms
@@ -74,6 +86,10 @@ if (ENABLE_LINT)
     set(CMAKE_C_CLANG_TIDY "clang-tidy;-checks=*")
 endif()
 
+#------------------------------------------------------------------------------
+#
+# The following are the original TRENTOS-M build targets
+#
 #------------------------------------------------------------------------------
 
 project(seos_tls C)
@@ -150,6 +166,117 @@ project(seos_tls_with_rpc_server C)
 
 add_library(${PROJECT_NAME} STATIC
     ${SHARED_LIB_SOURCES}
+    "src/OS_TlsRpcServer.c"
+    ${MBEDTLS_SOURCES}
+)
+
+target_compile_definitions(${PROJECT_NAME}
+    PUBLIC
+        ${PUBLIC_TARGET_COMPILE_DEFINITIONS}
+    PRIVATE
+        ${PRIVATE_TARGET_COMPILE_DEFINITIONS}
+)
+
+target_compile_options(${PROJECT_NAME}
+    PUBLIC
+        ${PUBLIC_TARGET_COMPILE_OPTIONS}
+    PRIVATE
+        ${PRIVATE_TARGET_COMPILE_OPTIONS}
+        -DSEOS_TLS_WITH_RPC_SERVER
+)
+
+target_include_directories(${PROJECT_NAME}
+    PUBLIC
+        "inc"
+        "3rdParty/mbedtls/include"
+)
+
+target_link_libraries(${PROJECT_NAME}
+    seos_core_api
+    seos_libs
+)
+
+#------------------------------------------------------------------------------
+#
+# The following are variants of the original build targets, which use the 
+# TLS library implementation in TlsLibPb.c.
+#
+#------------------------------------------------------------------------------
+
+project(seos_tls_pb C)
+
+add_library(${PROJECT_NAME} STATIC
+    ${SHARED_LIB_PB_SOURCES}
+    ${MBEDTLS_SOURCES}
+)
+
+target_compile_definitions(${PROJECT_NAME}
+    PUBLIC
+        ${PUBLIC_TARGET_COMPILE_DEFINITIONS}
+    PRIVATE
+        ${PRIVATE_TARGET_COMPILE_DEFINITIONS}
+)
+
+target_compile_options(${PROJECT_NAME}
+    PUBLIC
+        ${PUBLIC_TARGET_COMPILE_OPTIONS}
+    PRIVATE
+        ${PRIVATE_TARGET_COMPILE_OPTIONS}
+)
+
+target_include_directories(${PROJECT_NAME}
+    PUBLIC
+        "inc"
+        "3rdParty/mbedtls/include"
+)
+
+target_link_libraries(${PROJECT_NAME}
+    seos_core_api
+    seos_libs
+)
+
+#------------------------------------------------------------------------------
+
+project(seos_tls_pb_with_rpc_client C)
+
+add_library(${PROJECT_NAME} STATIC
+    ${SHARED_LIB_PB_SOURCES}
+    "src/OS_TlsRpcClient.c"
+    ${MBEDTLS_SOURCES}
+)
+
+target_compile_definitions(${PROJECT_NAME}
+    PUBLIC
+        ${PUBLIC_TARGET_COMPILE_DEFINITIONS}
+    PRIVATE
+        ${PRIVATE_TARGET_COMPILE_DEFINITIONS}
+)
+
+target_compile_options(${PROJECT_NAME}
+    PUBLIC
+        ${PUBLIC_TARGET_COMPILE_OPTIONS}
+    PRIVATE
+        ${PRIVATE_TARGET_COMPILE_OPTIONS}
+        -DSEOS_TLS_WITH_RPC_CLIENT
+)
+
+target_include_directories(${PROJECT_NAME}
+    PUBLIC
+        "inc"
+        "3rdParty/mbedtls/include"
+)
+
+target_link_libraries(${PROJECT_NAME}
+    seos_core_api
+    seos_libs
+)
+
+#------------------------------------------------------------------------------
+
+project(seos_tls_pb_with_rpc_server C)
+
+add_library(${PROJECT_NAME} STATIC
+    ${SHARED_LIB_PB_SOURCES}
     "src/OS_TlsRpcServer.c"
     ${MBEDTLS_SOURCES}
 )
