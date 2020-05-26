@@ -31,31 +31,31 @@ Debug_STATIC_ASSERT(OS_Tls_MAX_DIGESTS >= OS_Tls_MAX_CIPHERSUITES);
 
 typedef struct TlsLib TlsLib_t;
 
-seos_err_t
+OS_Error_t
 TlsLib_init(
     TlsLib_t**             self,
     const TlsLib_Config_t* cfg);
 
-seos_err_t
+OS_Error_t
 TlsLib_handshake(
     TlsLib_t* self);
 
-seos_err_t
+OS_Error_t
 TlsLib_write(
     TlsLib_t*    self,
     const void*  data,
     const size_t dataSize);
 
-seos_err_t
+OS_Error_t
 TlsLib_read(
     TlsLib_t* self,
     void*     data,
     size_t*   dataSize);
 
-seos_err_t
+OS_Error_t
 TlsLib_reset(
     TlsLib_t* self);
 
-seos_err_t
+OS_Error_t
 TlsLib_free(
     TlsLib_t* self);

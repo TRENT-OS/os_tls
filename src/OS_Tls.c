@@ -18,12 +18,12 @@ struct OS_Tls
     void* context;
 };
 
-seos_err_t
+OS_Error_t
 OS_Tls_init(
     OS_Tls_Handle_t*       self,
     const OS_Tls_Config_t* cfg)
 {
-    seos_err_t err;
+    OS_Error_t err;
     OS_Tls_t* api;
 
     if (NULL == self || NULL == cfg)
@@ -70,11 +70,11 @@ OS_Tls_init(
     return err;
 }
 
-seos_err_t
+OS_Error_t
 OS_Tls_free(
     OS_Tls_Handle_t self)
 {
-    seos_err_t err;
+    OS_Error_t err;
 
     if (NULL == self)
     {
@@ -105,7 +105,7 @@ OS_Tls_free(
     return err;
 }
 
-seos_err_t
+OS_Error_t
 OS_Tls_handshake(
     OS_Tls_Handle_t self)
 {
@@ -129,7 +129,7 @@ OS_Tls_handshake(
     return SEOS_ERROR_GENERIC;
 }
 
-seos_err_t
+OS_Error_t
 OS_Tls_write(
     OS_Tls_Handle_t self,
     const void*     data,
@@ -155,7 +155,7 @@ OS_Tls_write(
     return SEOS_ERROR_GENERIC;
 }
 
-seos_err_t
+OS_Error_t
 OS_Tls_read(
     OS_Tls_Handle_t self,
     void*           data,
@@ -181,7 +181,7 @@ OS_Tls_read(
     return SEOS_ERROR_GENERIC;
 }
 
-seos_err_t
+OS_Error_t
 OS_Tls_reset(
     OS_Tls_Handle_t self)
 {

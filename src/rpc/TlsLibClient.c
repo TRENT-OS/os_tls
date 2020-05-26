@@ -19,7 +19,7 @@ struct TlsLibClient
 
 // Public functions ------------------------------------------------------------
 
-seos_err_t
+OS_Error_t
 TlsLibClient_init(
     TlsLibClient_t**             self,
     const TlsLibClient_Config_t* cfg)
@@ -43,7 +43,7 @@ TlsLibClient_init(
     return SEOS_SUCCESS;
 }
 
-seos_err_t
+OS_Error_t
 TlsLibClient_free(
     TlsLibClient_t* self)
 {
@@ -59,7 +59,7 @@ TlsLibClient_free(
 
 // RPC functions ---------------------------------------------------------------
 
-seos_err_t
+OS_Error_t
 TlsLibClient_handshake(
     TlsLibClient_t* self)
 {
@@ -71,7 +71,7 @@ TlsLibClient_handshake(
     return TlsLibServer_handshake();
 }
 
-seos_err_t
+OS_Error_t
 TlsLibClient_write(
     TlsLibClient_t* self,
     const void*     data,
@@ -91,13 +91,13 @@ TlsLibClient_write(
     return TlsLibServer_write(dataSize);
 }
 
-seos_err_t
+OS_Error_t
 TlsLibClient_read(
     TlsLibClient_t* self,
     void*           data,
     size_t*         dataSize)
 {
-    seos_err_t rc;
+    OS_Error_t rc;
 
     if (NULL == self || NULL == data || NULL == dataSize)
     {
@@ -119,7 +119,7 @@ TlsLibClient_read(
     return rc;
 }
 
-seos_err_t
+OS_Error_t
 TlsLibClient_reset(
     TlsLibClient_t* self)
 {

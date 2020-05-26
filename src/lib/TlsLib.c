@@ -97,7 +97,7 @@ getMinOf(
     return (a < b) ? a : b;
 }
 
-static seos_err_t
+static OS_Error_t
 derivePolicy(
     const TlsLib_Config_t* cfg,
     OS_Tls_Policy_t*       policy)
@@ -131,7 +131,7 @@ derivePolicy(
     return SEOS_SUCCESS;
 }
 
-static seos_err_t
+static OS_Error_t
 checkSuites(
     const OS_Tls_CipherSuite_t* suites,
     const size_t                numSuites)
@@ -158,7 +158,7 @@ checkSuites(
     return SEOS_SUCCESS;
 }
 
-static seos_err_t
+static OS_Error_t
 validatePolicy(
     const TlsLib_Config_t* cfg,
     const OS_Tls_Policy_t* policy)
@@ -274,7 +274,7 @@ setCertProfile(
     profile->rsa_min_bitlen = policy->rsaMinBits;
 }
 
-static seos_err_t
+static OS_Error_t
 initImpl(
     TlsLib_t* self)
 {
@@ -373,7 +373,7 @@ err0:
     return SEOS_ERROR_ABORTED;
 }
 
-static seos_err_t
+static OS_Error_t
 freeImpl(
     TlsLib_t* self)
 {
@@ -387,7 +387,7 @@ freeImpl(
     return SEOS_SUCCESS;
 }
 
-static seos_err_t
+static OS_Error_t
 handshakeImpl(
     TlsLib_t* self)
 {
@@ -415,7 +415,7 @@ handshakeImpl(
     }
 }
 
-static seos_err_t
+static OS_Error_t
 writeImpl(
     TlsLib_t*    self,
     const void*  data,
@@ -442,7 +442,7 @@ writeImpl(
     return SEOS_SUCCESS;
 }
 
-static seos_err_t
+static OS_Error_t
 readImpl(
     TlsLib_t* self,
     void*     data,
@@ -473,7 +473,7 @@ readImpl(
     return SEOS_ERROR_ABORTED;
 }
 
-static seos_err_t
+static OS_Error_t
 resetImpl(
     TlsLib_t* self)
 {
@@ -483,12 +483,12 @@ resetImpl(
 
 // Public functions ------------------------------------------------------------
 
-seos_err_t
+OS_Error_t
 TlsLib_init(
     TlsLib_t**             self,
     const TlsLib_Config_t* cfg)
 {
-    seos_err_t err;
+    OS_Error_t err;
     TlsLib_t* lib;
 
     if (NULL == self || NULL == cfg)
@@ -558,11 +558,11 @@ TlsLib_init(
     return err;
 }
 
-seos_err_t
+OS_Error_t
 TlsLib_free(
     TlsLib_t* self)
 {
-    seos_err_t err;
+    OS_Error_t err;
 
     if (NULL == self)
     {
@@ -575,11 +575,11 @@ TlsLib_free(
     return err;
 }
 
-seos_err_t
+OS_Error_t
 TlsLib_handshake(
     TlsLib_t* self)
 {
-    seos_err_t err;
+    OS_Error_t err;
 
     if (NULL == self)
     {
@@ -596,7 +596,7 @@ TlsLib_handshake(
     return err;
 }
 
-seos_err_t
+OS_Error_t
 TlsLib_write(
     TlsLib_t*    self,
     const void*  data,
@@ -614,7 +614,7 @@ TlsLib_write(
     return writeImpl(self, data, dataSize);
 }
 
-seos_err_t
+OS_Error_t
 TlsLib_read(
     TlsLib_t* self,
     void*     data,
@@ -632,7 +632,7 @@ TlsLib_read(
     return readImpl(self, data, dataSize);
 }
 
-seos_err_t
+OS_Error_t
 TlsLib_reset(
     TlsLib_t* self)
 {

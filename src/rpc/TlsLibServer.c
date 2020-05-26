@@ -46,13 +46,13 @@ OS_Tls_getServer(
 
 // Server functions ------------------------------------------------------------
 
-seos_err_t
+OS_Error_t
 TlsLibServer_init(
     TlsLibServer_t**             self,
     const TlsLibServer_Config_t* cfg)
 {
     TlsLibServer_t* svr;
-    seos_err_t err;
+    OS_Error_t err;
 
     if (NULL == self || NULL == cfg)
     {
@@ -77,11 +77,11 @@ TlsLibServer_init(
     return err;
 }
 
-seos_err_t
+OS_Error_t
 TlsLibServer_free(
     TlsLibServer_t* self)
 {
-    seos_err_t err;
+    OS_Error_t err;
 
     if (NULL == self)
     {
@@ -96,7 +96,7 @@ TlsLibServer_free(
 
 // RPC functions ---------------------------------------------------------------
 
-seos_err_t
+OS_Error_t
 TlsLibServer_handshake(
     void)
 {
@@ -106,7 +106,7 @@ TlsLibServer_handshake(
     return TlsLib_handshake(self->library);
 }
 
-seos_err_t
+OS_Error_t
 TlsLibServer_write(
     size_t dataSize)
 {
@@ -116,7 +116,7 @@ TlsLibServer_write(
     return TlsLib_write(self->library, self->dataport, dataSize);
 }
 
-seos_err_t
+OS_Error_t
 TlsLibServer_read(
     size_t* dataSize)
 {
@@ -126,7 +126,7 @@ TlsLibServer_read(
     return TlsLib_read(self->library, self->dataport, dataSize);
 }
 
-seos_err_t
+OS_Error_t
 TlsLibServer_reset(
     void)
 {
