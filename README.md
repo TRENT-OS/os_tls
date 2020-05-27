@@ -2,7 +2,7 @@
 
 ## Overview
 
-SEOS TLS Library provides a library that allows components to establish TLS
+OS TLS Library provides a library that allows components to establish TLS
 connections
 
 ## Usage

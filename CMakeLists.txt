@@ -1,15 +1,15 @@
 #
-# SEOS TLS Library
+# OS TLS Library
 #
 # We have three library targets:
-# 1. SEOS_TLS:
+# 1. OS_TLS:
 #    Provides only functionality of the TLS library behind calls to the API.
-# 2. SEOS_TLS_WITH_RPC_CLIENT:
+# 2. OS_TLS_WITH_RPC_CLIENT:
 #    Provides library functionality to execute TLS locally, but also allows
 #    to operate TLS API in RPC client mode, where calls to the API are
 #    transparently mapped to an RPC interface and executed in a separate component
 #    (e.g., the TlsRpcServer)
-# 3. SEOS_TLS_WITH_RPC_SEVER:
+# 3. OS_TLS_WITH_RPC_SEVER:
 #    Provides library functionality to execute TLS locally, but also allows
 #    to instantiate the TLS API as RPC server easily, which can then be used
 #    to serve RPC requests from a TLS API RPC client.
@@ -22,7 +22,7 @@ cmake_minimum_required(VERSION 3.13.0)
 cmake_policy(SET CMP0076 NEW)
 
 # We need to build 3rdparty/mbedtls for this and would like to avoid
-# all users of SEOS_CRYPTO to include this as well, so we do it here
+# all users of OS_CRYPTO to include this as well, so we do it here
 seos_use_libs(
     3RDPARTY_MBEDTLS_FOR_TLS
 )
@@ -97,7 +97,7 @@ target_compile_definitions(${PROJECT_NAME}
 target_compile_options(${PROJECT_NAME}
     INTERFACE
         ${COMPILE_OPTIONS}
-        -DSEOS_TLS_WITH_RPC_CLIENT
+        -DOS_TLS_WITH_RPC_CLIENT
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -132,7 +132,7 @@ target_compile_definitions(${PROJECT_NAME}
 target_compile_options(${PROJECT_NAME}
     INTERFACE
         ${COMPILE_OPTIONS}
-        -DSEOS_TLS_WITH_RPC_SERVER
+        -DOS_TLS_WITH_RPC_SERVER
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -149,7 +149,7 @@ target_link_libraries(${PROJECT_NAME}
 
 #------------------------------------------------------------------------------
 
-# if invoked from the SEOS sandbox, provide a documentation build target
+# if invoked from the OS sandbox, provide a documentation build target
 if (COMMAND seos_create_doxygen_target)
 
     seos_create_doxygen_target( seos_tls_doc

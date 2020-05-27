@@ -44,18 +44,18 @@ OS_Tls_init(
     case OS_Tls_MODE_LIBRARY:
         err = TlsLib_init((TlsLib_t**) &api->context, &cfg->config.library);
         break;
-#if defined(SEOS_TLS_WITH_RPC_CLIENT)
+#if defined(OS_TLS_WITH_RPC_CLIENT)
     case OS_Tls_MODE_CLIENT:
         err = TlsLibClient_init((TlsLibClient_t**) &api->context,
                                 &cfg->config.client);
         break;
-#endif /* SEOS_TLS_WITH_RPC_CLIENT */
-#if defined(SEOS_TLS_WITH_RPC_SERVER)
+#endif /* OS_TLS_WITH_RPC_CLIENT */
+#if defined(OS_TLS_WITH_RPC_SERVER)
     case OS_Tls_MODE_SERVER:
         err = TlsLibServer_init((TlsLibServer_t**) &api->context,
                                 &cfg->config.server);
         break;
-#endif /* SEOS_TLS_WITH_RPC_SERVER */
+#endif /* OS_TLS_WITH_RPC_SERVER */
     default:
         err = OS_ERROR_NOT_SUPPORTED;
     }
@@ -86,16 +86,16 @@ OS_Tls_free(
     case OS_Tls_MODE_LIBRARY:
         err = TlsLib_free(self->context);
         break;
-#if defined(SEOS_TLS_WITH_RPC_CLIENT)
+#if defined(OS_TLS_WITH_RPC_CLIENT)
     case OS_Tls_MODE_CLIENT:
         err = TlsLibClient_free(self->context);
         break;
-#endif /* SEOS_TLS_WITH_RPC_CLIENT */
-#if defined(SEOS_TLS_WITH_RPC_SERVER)
+#endif /* OS_TLS_WITH_RPC_CLIENT */
+#if defined(OS_TLS_WITH_RPC_SERVER)
     case OS_Tls_MODE_SERVER:
         err = TlsLibServer_free(self->context);
         break;
-#endif /* SEOS_TLS_WITH_RPC_SERVER */
+#endif /* OS_TLS_WITH_RPC_SERVER */
     default:
         err = OS_ERROR_NOT_SUPPORTED;
     }
@@ -118,10 +118,10 @@ OS_Tls_handshake(
     {
     case OS_Tls_MODE_LIBRARY:
         return TlsLib_handshake(self->context);
-#if defined(SEOS_TLS_WITH_RPC_CLIENT)
+#if defined(OS_TLS_WITH_RPC_CLIENT)
     case OS_Tls_MODE_CLIENT:
         return TlsLibClient_handshake(self->context);
-#endif /* SEOS_TLS_WITH_RPC_CLIENT */
+#endif /* OS_TLS_WITH_RPC_CLIENT */
     default:
         return OS_ERROR_NOT_SUPPORTED;
     }
@@ -144,10 +144,10 @@ OS_Tls_write(
     {
     case OS_Tls_MODE_LIBRARY:
         return TlsLib_write(self->context, data, dataSize);
-#if defined(SEOS_TLS_WITH_RPC_CLIENT)
+#if defined(OS_TLS_WITH_RPC_CLIENT)
     case OS_Tls_MODE_CLIENT:
         return TlsLibClient_write(self->context, data, dataSize);
-#endif /* SEOS_TLS_WITH_RPC_CLIENT */
+#endif /* OS_TLS_WITH_RPC_CLIENT */
     default:
         return OS_ERROR_NOT_SUPPORTED;
     }
@@ -170,10 +170,10 @@ OS_Tls_read(
     {
     case OS_Tls_MODE_LIBRARY:
         return TlsLib_read(self->context, data, dataSize);
-#if defined(SEOS_TLS_WITH_RPC_CLIENT)
+#if defined(OS_TLS_WITH_RPC_CLIENT)
     case OS_Tls_MODE_CLIENT:
         return TlsLibClient_read(self->context, data, dataSize);
-#endif /* SEOS_TLS_WITH_RPC_CLIENT */
+#endif /* OS_TLS_WITH_RPC_CLIENT */
     default:
         return OS_ERROR_NOT_SUPPORTED;
     }
@@ -194,10 +194,10 @@ OS_Tls_reset(
     {
     case OS_Tls_MODE_LIBRARY:
         return TlsLib_reset(self->context);
-#if defined(SEOS_TLS_WITH_RPC_CLIENT)
+#if defined(OS_TLS_WITH_RPC_CLIENT)
     case OS_Tls_MODE_CLIENT:
         return TlsLibClient_reset(self->context);
-#endif /* SEOS_TLS_WITH_RPC_CLIENT */
+#endif /* OS_TLS_WITH_RPC_CLIENT */
     default:
         return OS_ERROR_NOT_SUPPORTED;
     }

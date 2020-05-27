@@ -2,7 +2,7 @@
  * Copyright (C) 2019-2020, Hensoldt Cyber GmbH
  */
 
-#if defined(SEOS_TLS_WITH_RPC_SERVER)
+#if defined(OS_TLS_WITH_RPC_SERVER)
 
 #include "lib/TlsLib.h"
 #include "rpc/TlsLibServer.h"
@@ -136,4 +136,4 @@ TlsLibServer_reset(
     return TlsLib_reset(self->library);
 }
 
-#endif /* SEOS_TLS_WITH_RPC_SERVER */
+#endif /* OS_TLS_WITH_RPC_SERVER */
