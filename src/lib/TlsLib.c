@@ -86,7 +86,7 @@ getRndBytes(
     size_t         len)
 {
     return OS_CryptoRng_getBytes(ctx, 0, (void*) buf,
-                                 len) == SEOS_SUCCESS ? 0 : 1;
+                                 len) == OS_SUCCESS ? 0 : 1;
 }
 
 static inline size_t
@@ -124,11 +124,11 @@ derivePolicy(
                 OS_Tls_DIGEST_SHA256;
             break;
         default:
-            return SEOS_ERROR_NOT_SUPPORTED;
+            return OS_ERROR_NOT_SUPPORTED;
         }
     }
 
-    return SEOS_SUCCESS;
+    return OS_SUCCESS;
 }
 
 static OS_Error_t
@@ -140,7 +140,7 @@ checkSuites(
 
     if (numSuites <= 0 || numSuites > OS_Tls_MAX_CIPHERSUITES)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
 
     for (i = 0; i < numSuites; i++)
@@ -151,11 +151,11 @@ checkSuites(
         case OS_Tls_CIPHERSUITE_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
             break;
         default:
-            return SEOS_ERROR_NOT_SUPPORTED;
+            return OS_ERROR_NOT_SUPPORTED;
         }
     }
 
-    return SEOS_SUCCESS;
+    return OS_SUCCESS;
 }
 
 static OS_Error_t
@@ -171,7 +171,7 @@ validatePolicy(
         policy->signatureDigestsLen < 0
         || policy->signatureDigestsLen > OS_Tls_MAX_DIGESTS )
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
 
     // Check the session digests and signature digests
@@ -184,7 +184,7 @@ validatePolicy(
             case OS_Tls_DIGEST_SHA256:
                 break;
             default:
-                return SEOS_ERROR_NOT_SUPPORTED;
+                return OS_ERROR_NOT_SUPPORTED;
             }
         }
         if (i < policy->signatureDigestsLen)
@@ -194,7 +194,7 @@ validatePolicy(
             case OS_Tls_DIGEST_SHA256:
                 break;
             default:
-                return SEOS_ERROR_NOT_SUPPORTED;
+                return OS_ERROR_NOT_SUPPORTED;
             }
         }
     }
@@ -216,22 +216,22 @@ validatePolicy(
             checkDH  = true;
             break;
         default:
-            return SEOS_ERROR_NOT_SUPPORTED;
+            return OS_ERROR_NOT_SUPPORTED;
         }
     }
 
     if (checkRSA && ((policy->rsaMinBits > (OS_CryptoKey_SIZE_RSA_MAX * 8)) ||
                      (policy->rsaMinBits < (OS_CryptoKey_SIZE_RSA_MIN * 8))))
     {
-        return SEOS_ERROR_NOT_SUPPORTED;
+        return OS_ERROR_NOT_SUPPORTED;
     }
     if (checkDH && ((policy->dhMinBits > (OS_CryptoKey_SIZE_DH_MAX * 8)) ||
                     (policy->dhMinBits < (OS_CryptoKey_SIZE_DH_MIN * 8))))
     {
-        return SEOS_ERROR_NOT_SUPPORTED;
+        return OS_ERROR_NOT_SUPPORTED;
     }
 
-    return SEOS_SUCCESS;
+    return OS_SUCCESS;
 }
 
 static void
@@ -358,7 +358,7 @@ initImpl(
         goto err2;
     }
 
-    return SEOS_SUCCESS;
+    return OS_SUCCESS;
 
 err2:
     mbedtls_ssl_free(&self->mbedtls.ssl);
@@ -370,7 +370,7 @@ err1:
 err0:
     mbedtls_ssl_config_free(&self->mbedtls.conf);
 
-    return SEOS_ERROR_ABORTED;
+    return OS_ERROR_ABORTED;
 }
 
 static OS_Error_t
@@ -384,7 +384,7 @@ freeImpl(
     }
     mbedtls_ssl_config_free(&self->mbedtls.conf);
 
-    return SEOS_SUCCESS;
+    return OS_SUCCESS;
 }
 
 static OS_Error_t
@@ -397,7 +397,7 @@ handshakeImpl(
     {
         if ((rc = mbedtls_ssl_handshake(&self->mbedtls.ssl)) == 0)
         {
-            return SEOS_SUCCESS;
+            return OS_SUCCESS;
         }
         else if ((rc == MBEDTLS_ERR_SSL_WANT_READ) ||
                  (rc == MBEDTLS_ERR_SSL_WANT_WRITE) )
@@ -410,7 +410,7 @@ handshakeImpl(
         else
         {
             Debug_LOG_ERROR("mbedtls_ssl_handshake() with code -0x%04x", -rc);
-            return SEOS_ERROR_ABORTED;
+            return OS_ERROR_ABORTED;
         }
     }
 }
@@ -431,7 +431,7 @@ writeImpl(
         if ((rc = mbedtls_ssl_write(&self->mbedtls.ssl, data + offs, to_write)) <= 0)
         {
             Debug_LOG_ERROR("mbedtls_ssl_write() with code 0x%04x", rc);
-            return SEOS_ERROR_ABORTED;
+            return OS_ERROR_ABORTED;
         }
         written  = rc;
         // Handle cases where we write only parts
@@ -439,7 +439,7 @@ writeImpl(
         offs     = offs     + written;
     }
 
-    return SEOS_SUCCESS;
+    return OS_SUCCESS;
 }
 
 static OS_Error_t
@@ -455,7 +455,7 @@ readImpl(
     {
         // We got some data
         *dataSize = rc;
-        return SEOS_SUCCESS;
+        return OS_SUCCESS;
     }
 
     switch (rc)
@@ -465,12 +465,12 @@ readImpl(
         // that there will be no more data
         *dataSize = 0;
         self->open = false;
-        return SEOS_SUCCESS;
+        return OS_SUCCESS;
     }
 
     Debug_LOG_ERROR("mbedtls_ssl_read() with code 0x%04x", rc);
 
-    return SEOS_ERROR_ABORTED;
+    return OS_ERROR_ABORTED;
 }
 
 static OS_Error_t
@@ -478,7 +478,7 @@ resetImpl(
     TlsLib_t* self)
 {
     return (mbedtls_ssl_session_reset(&self->mbedtls.ssl) == 0) ?
-           SEOS_SUCCESS : SEOS_ERROR_ABORTED;
+           OS_SUCCESS : OS_ERROR_ABORTED;
 }
 
 // Public functions ------------------------------------------------------------
@@ -493,15 +493,15 @@ TlsLib_init(
 
     if (NULL == self || NULL == cfg)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
     else if (NULL == cfg->crypto.handle)
     {
         Debug_LOG_ERROR("Crypto context is NULL");
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
     else if ((err = checkSuites(cfg->crypto.cipherSuites,
-                                cfg->crypto.cipherSuitesLen)) != SEOS_SUCCESS)
+                                cfg->crypto.cipherSuitesLen)) != OS_SUCCESS)
     {
         Debug_LOG_ERROR("Invalid selection of ciphersuites or too many ciphersuites given");
         return err;
@@ -509,19 +509,19 @@ TlsLib_init(
     else if (NULL == cfg->socket.recv || NULL == cfg->socket.send)
     {
         Debug_LOG_ERROR("Socket callbacks for send/recv are not set");
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
     else if (!(cfg->flags & OS_Tls_FLAG_NO_VERIFY) &&
              (strstr(cfg->crypto.caCert, "-----BEGIN CERTIFICATE-----") == NULL ||
               strstr(cfg->crypto.caCert, "-----END CERTIFICATE-----") == NULL) )
     {
         Debug_LOG_ERROR("Presented CA cert is not valid (maybe not PEM encoded?)");
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
 
     if ((lib = malloc(sizeof(TlsLib_t))) == NULL)
     {
-        return SEOS_ERROR_INSUFFICIENT_SPACE;
+        return OS_ERROR_INSUFFICIENT_SPACE;
     }
 
     *self = lib;
@@ -542,7 +542,7 @@ TlsLib_init(
         lib->policy = *cfg->crypto.policy;
     }
 
-    if ((err = validatePolicy(&lib->cfg, &lib->policy)) == SEOS_SUCCESS)
+    if ((err = validatePolicy(&lib->cfg, &lib->policy)) == OS_SUCCESS)
     {
         // These two need to be zero-terminated so they can be passed to mbedTLS!
         lib->cfg.crypto.cipherSuites[lib->cfg.crypto.cipherSuitesLen] = 0;
@@ -550,7 +550,7 @@ TlsLib_init(
         err = initImpl(lib);
     }
 
-    if (SEOS_SUCCESS != err)
+    if (OS_SUCCESS != err)
     {
         free(lib);
     }
@@ -566,7 +566,7 @@ TlsLib_free(
 
     if (NULL == self)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
 
     err = freeImpl(self);
@@ -583,15 +583,15 @@ TlsLib_handshake(
 
     if (NULL == self)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
     else if (self->open)
     {
-        return SEOS_ERROR_OPERATION_DENIED;
+        return OS_ERROR_OPERATION_DENIED;
     }
 
     err = handshakeImpl(self);
-    self->open = (err == SEOS_SUCCESS);
+    self->open = (err == OS_SUCCESS);
 
     return err;
 }
@@ -604,11 +604,11 @@ TlsLib_write(
 {
     if (NULL == self || NULL == data || 0 == dataSize)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
     else if (!self->open)
     {
-        return SEOS_ERROR_OPERATION_DENIED;
+        return OS_ERROR_OPERATION_DENIED;
     }
 
     return writeImpl(self, data, dataSize);
@@ -622,11 +622,11 @@ TlsLib_read(
 {
     if (NULL == self || NULL == data || NULL == dataSize || 0 == *dataSize)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
     else if (!self->open)
     {
-        return SEOS_ERROR_OPERATION_DENIED;
+        return OS_ERROR_OPERATION_DENIED;
     }
 
     return readImpl(self, data, dataSize);
@@ -638,7 +638,7 @@ TlsLib_reset(
 {
     if (NULL == self)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
 
     // Regardless of the success of resetImpl() we set the connection to closed,

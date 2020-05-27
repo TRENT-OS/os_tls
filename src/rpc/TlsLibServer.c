@@ -37,10 +37,10 @@ OS_Tls_getServer(
     if (((a = TlsLibServer_getTls()) == NULL) ||        \
         ((s = OS_Tls_getServer(a)) == NULL) )           \
     {                                                   \
-        return SEOS_ERROR_INVALID_PARAMETER;            \
+        return OS_ERROR_INVALID_PARAMETER;            \
     }                                                   \
     if (OS_Tls_MODE_SERVER != OS_Tls_getMode(a)) {      \
-        return SEOS_ERROR_INVALID_STATE;                \
+        return OS_ERROR_INVALID_STATE;                \
     }                                                   \
 }
 
@@ -56,12 +56,12 @@ TlsLibServer_init(
 
     if (NULL == self || NULL == cfg)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
 
     if ((svr = malloc(sizeof(TlsLibServer_t))) == NULL)
     {
-        return SEOS_ERROR_INSUFFICIENT_SPACE;
+        return OS_ERROR_INSUFFICIENT_SPACE;
     }
 
     *self = svr;
@@ -69,7 +69,7 @@ TlsLibServer_init(
     svr->dataport = cfg->dataport;
 
     // We need an instance of the library for the server to work with
-    if ((err = TlsLib_init(&svr->library, &cfg->library)) != SEOS_SUCCESS)
+    if ((err = TlsLib_init(&svr->library, &cfg->library)) != OS_SUCCESS)
     {
         free(svr);
     }
@@ -85,7 +85,7 @@ TlsLibServer_free(
 
     if (NULL == self)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
 
     err = TlsLib_free(self->library);

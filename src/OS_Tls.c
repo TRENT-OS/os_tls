@@ -28,12 +28,12 @@ OS_Tls_init(
 
     if (NULL == self || NULL == cfg)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
 
     if ((api = malloc(sizeof(OS_Tls_t))) == NULL)
     {
-        return SEOS_ERROR_INSUFFICIENT_SPACE;
+        return OS_ERROR_INSUFFICIENT_SPACE;
     }
 
     memset(api, 0, sizeof(OS_Tls_t));
@@ -57,10 +57,10 @@ OS_Tls_init(
         break;
 #endif /* SEOS_TLS_WITH_RPC_SERVER */
     default:
-        err = SEOS_ERROR_NOT_SUPPORTED;
+        err = OS_ERROR_NOT_SUPPORTED;
     }
 
-    if (SEOS_SUCCESS != err)
+    if (OS_SUCCESS != err)
     {
         free(api);
     }
@@ -78,7 +78,7 @@ OS_Tls_free(
 
     if (NULL == self)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
 
     switch (self->mode)
@@ -97,7 +97,7 @@ OS_Tls_free(
         break;
 #endif /* SEOS_TLS_WITH_RPC_SERVER */
     default:
-        err = SEOS_ERROR_NOT_SUPPORTED;
+        err = OS_ERROR_NOT_SUPPORTED;
     }
 
     free(self);
@@ -111,7 +111,7 @@ OS_Tls_handshake(
 {
     if (NULL == self)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
 
     switch (self->mode)
@@ -123,10 +123,10 @@ OS_Tls_handshake(
         return TlsLibClient_handshake(self->context);
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
     default:
-        return SEOS_ERROR_NOT_SUPPORTED;
+        return OS_ERROR_NOT_SUPPORTED;
     }
 
-    return SEOS_ERROR_GENERIC;
+    return OS_ERROR_GENERIC;
 }
 
 OS_Error_t
@@ -137,7 +137,7 @@ OS_Tls_write(
 {
     if (NULL == self)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
 
     switch (self->mode)
@@ -149,10 +149,10 @@ OS_Tls_write(
         return TlsLibClient_write(self->context, data, dataSize);
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
     default:
-        return SEOS_ERROR_NOT_SUPPORTED;
+        return OS_ERROR_NOT_SUPPORTED;
     }
 
-    return SEOS_ERROR_GENERIC;
+    return OS_ERROR_GENERIC;
 }
 
 OS_Error_t
@@ -163,7 +163,7 @@ OS_Tls_read(
 {
     if (NULL == self)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
 
     switch (self->mode)
@@ -175,10 +175,10 @@ OS_Tls_read(
         return TlsLibClient_read(self->context, data, dataSize);
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
     default:
-        return SEOS_ERROR_NOT_SUPPORTED;
+        return OS_ERROR_NOT_SUPPORTED;
     }
 
-    return SEOS_ERROR_GENERIC;
+    return OS_ERROR_GENERIC;
 }
 
 OS_Error_t
@@ -187,7 +187,7 @@ OS_Tls_reset(
 {
     if (NULL == self)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
 
     switch (self->mode)
@@ -199,10 +199,10 @@ OS_Tls_reset(
         return TlsLibClient_reset(self->context);
 #endif /* SEOS_TLS_WITH_RPC_CLIENT */
     default:
-        return SEOS_ERROR_NOT_SUPPORTED;
+        return OS_ERROR_NOT_SUPPORTED;
     }
 
-    return SEOS_ERROR_GENERIC;
+    return OS_ERROR_GENERIC;
 }
 
 void*

@@ -28,19 +28,19 @@ TlsLibClient_init(
 
     if (NULL == self || NULL == cfg || NULL == cfg->dataport)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
 
     if ((cli = malloc(sizeof(TlsLibClient_t))) == NULL)
     {
-        return SEOS_ERROR_INSUFFICIENT_SPACE;
+        return OS_ERROR_INSUFFICIENT_SPACE;
     }
 
     *self = cli;
     memset(cli, 0, sizeof(TlsLibClient_t));
     cli->dataport   = cfg->dataport;
 
-    return SEOS_SUCCESS;
+    return OS_SUCCESS;
 }
 
 OS_Error_t
@@ -49,12 +49,12 @@ TlsLibClient_free(
 {
     if (NULL == self)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
 
     free(self);
 
-    return SEOS_SUCCESS;
+    return OS_SUCCESS;
 }
 
 // RPC functions ---------------------------------------------------------------
@@ -65,7 +65,7 @@ TlsLibClient_handshake(
 {
     if (NULL == self)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
 
     return TlsLibServer_handshake();
@@ -79,11 +79,11 @@ TlsLibClient_write(
 {
     if (NULL == self || NULL == data)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
     else if (dataSize > PAGE_SIZE)
     {
-        return SEOS_ERROR_INSUFFICIENT_SPACE;
+        return OS_ERROR_INSUFFICIENT_SPACE;
     }
 
     memcpy(self->dataport, data, dataSize);
@@ -101,14 +101,14 @@ TlsLibClient_read(
 
     if (NULL == self || NULL == data || NULL == dataSize)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
 
-    if ((rc = TlsLibServer_read(dataSize)) == SEOS_SUCCESS)
+    if ((rc = TlsLibServer_read(dataSize)) == OS_SUCCESS)
     {
         if (*dataSize > PAGE_SIZE)
         {
-            return SEOS_ERROR_INSUFFICIENT_SPACE;
+            return OS_ERROR_INSUFFICIENT_SPACE;
         }
         else
         {
@@ -125,7 +125,7 @@ TlsLibClient_reset(
 {
     if (NULL == self)
     {
-        return SEOS_ERROR_INVALID_PARAMETER;
+        return OS_ERROR_INVALID_PARAMETER;
     }
 
     return TlsLibServer_reset();
