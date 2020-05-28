@@ -23,7 +23,7 @@ cmake_policy(SET CMP0076 NEW)
 
 # We need to build 3rdparty/mbedtls for this and would like to avoid
 # all users of OS_CRYPTO to include this as well, so we do it here
-seos_use_libs(
+os_use_libs(
     3RDPARTY_MBEDTLS_FOR_TLS
 )
 
@@ -150,9 +150,9 @@ target_link_libraries(${PROJECT_NAME}
 #------------------------------------------------------------------------------
 
 # if invoked from the OS sandbox, provide a documentation build target
-if (COMMAND seos_create_doxygen_target)
+if (COMMAND os_create_doxygen_target)
 
-    seos_create_doxygen_target( seos_tls_doc
+    os_create_doxygen_target( os_tls_doc
         # API header is documented as part of seos_core_api, so we do nothing
         "echo"
         # API header is documented as part of seos_core_api, so we do nothing
