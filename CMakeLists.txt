@@ -21,12 +21,6 @@ cmake_minimum_required(VERSION 3.13.0)
 # converted into absolute paths in target_sources(INTERFACE ....)
 cmake_policy(SET CMP0076 NEW)
 
-# We need to build 3rdparty/mbedtls for this and would like to avoid
-# all users of OS_CRYPTO to include this as well, so we do it here
-os_use_libs(
-    3RDPARTY_MBEDTLS_FOR_TLS
-)
-
 
 #------------------------------------------------------------------------------
 project(os_tls C)
