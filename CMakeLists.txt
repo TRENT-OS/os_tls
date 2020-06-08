@@ -39,10 +39,6 @@ set(COMPILE_OTIONS
     -Wall
 )
 
-if (ENABLE_LINT)
-    set(CMAKE_C_CPPCHECK "cppcheck;--enable=warning;--inline-suppr")
-    set(CMAKE_C_CLANG_TIDY "clang-tidy;-checks=*")
-endif()
 
 
 #------------------------------------------------------------------------------
