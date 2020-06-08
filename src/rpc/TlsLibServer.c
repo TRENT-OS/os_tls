@@ -37,10 +37,10 @@ OS_Tls_getServer(
     if (((a = TlsLibServer_getTls()) == NULL) ||        \
         ((s = OS_Tls_getServer(a)) == NULL) )           \
     {                                                   \
-        return OS_ERROR_INVALID_PARAMETER;            \
+        return OS_ERROR_INVALID_PARAMETER;              \
     }                                                   \
     if (OS_Tls_MODE_SERVER != OS_Tls_getMode(a)) {      \
-        return OS_ERROR_INVALID_STATE;                \
+        return OS_ERROR_INVALID_STATE;                  \
     }                                                   \
 }
 
@@ -65,6 +65,7 @@ TlsLibServer_init(
     }
 
     *self = svr;
+
     memset(svr, 0, sizeof(TlsLibServer_t));
     svr->dataport = cfg->dataport;
 

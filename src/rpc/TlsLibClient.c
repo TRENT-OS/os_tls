@@ -37,8 +37,9 @@ TlsLibClient_init(
     }
 
     *self = cli;
+
     memset(cli, 0, sizeof(TlsLibClient_t));
-    cli->dataport   = cfg->dataport;
+    cli->dataport = cfg->dataport;
 
     return OS_SUCCESS;
 }
