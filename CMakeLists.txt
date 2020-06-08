@@ -44,8 +44,8 @@ if (ENABLE_LINT)
     set(CMAKE_C_CLANG_TIDY "clang-tidy;-checks=*")
 endif()
 
-#------------------------------------------------------------------------------
 
+#------------------------------------------------------------------------------
 project(os_tls C)
 
 add_library(${PROJECT_NAME} INTERFACE)
@@ -77,8 +77,8 @@ target_link_libraries(${PROJECT_NAME}
         os_libs
 )
 
-#------------------------------------------------------------------------------
 
+#------------------------------------------------------------------------------
 project(os_tls_with_rpc_client C)
 
 add_library(${PROJECT_NAME} INTERFACE)
@@ -112,8 +112,8 @@ target_link_libraries(${PROJECT_NAME}
         os_libs
 )
 
-#------------------------------------------------------------------------------
 
+#------------------------------------------------------------------------------
 project(os_tls_with_rpc_server C)
 
 add_library(${PROJECT_NAME} INTERFACE)
@@ -147,8 +147,8 @@ target_link_libraries(${PROJECT_NAME}
         os_libs
 )
 
-#------------------------------------------------------------------------------
 
+#------------------------------------------------------------------------------
 # if invoked from the OS sandbox, provide a documentation build target
 if (COMMAND os_create_doxygen_target)
 
