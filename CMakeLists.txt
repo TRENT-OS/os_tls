@@ -33,10 +33,6 @@ set(SOURCES
     "src/lib/TlsLib.c"
 )
 
-set(COMPILE_OTIONS
-    -Wall
-)
-
 
 
 #------------------------------------------------------------------------------
@@ -47,11 +43,6 @@ add_library(${PROJECT_NAME} INTERFACE)
 target_sources(${PROJECT_NAME}
     INTERFACE
         ${SOURCES}
-)
-
-target_compile_options(${PROJECT_NAME}
-    INTERFACE
-        ${COMPILE_OTIONS}
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -83,11 +74,6 @@ target_compile_definitions(${PROJECT_NAME}
         OS_TLS_WITH_RPC_CLIENT
 )
 
-target_compile_options(${PROJECT_NAME}
-    INTERFACE
-        ${COMPILE_OPTIONS}
-)
-
 target_include_directories(${PROJECT_NAME}
     INTERFACE
         "inc"
@@ -115,11 +101,6 @@ target_sources(${PROJECT_NAME}
 target_compile_definitions(${PROJECT_NAME}
     INTERFACE
         OS_TLS_WITH_RPC_SERVER
-)
-
-target_compile_options(${PROJECT_NAME}
-    INTERFACE
-        ${COMPILE_OPTIONS}
 )
 
 target_include_directories(${PROJECT_NAME}
