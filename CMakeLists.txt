@@ -27,13 +27,6 @@ os_use_libs(
     3RDPARTY_MBEDTLS_FOR_TLS
 )
 
-# These are the sources we ALWAYS compile, for all targets
-set(SOURCES
-    "src/OS_Tls.c"
-    "src/lib/TlsLib.c"
-)
-
-
 
 #------------------------------------------------------------------------------
 project(os_tls C)
@@ -42,7 +35,8 @@ add_library(${PROJECT_NAME} INTERFACE)
 
 target_sources(${PROJECT_NAME}
     INTERFACE
-        ${SOURCES}
+        "src/OS_Tls.c"
+        "src/lib/TlsLib.c"
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -65,7 +59,6 @@ add_library(${PROJECT_NAME} INTERFACE)
 
 target_sources(${PROJECT_NAME}
     INTERFACE
-        ${SOURCES}
         "src/rpc/TlsLibClient.c"
 )
 
@@ -74,16 +67,9 @@ target_compile_definitions(${PROJECT_NAME}
         OS_TLS_WITH_RPC_CLIENT
 )
 
-target_include_directories(${PROJECT_NAME}
-    INTERFACE
-        "inc"
-)
-
 target_link_libraries(${PROJECT_NAME}
     INTERFACE
-        3rdparty_mbedtls_for_tls
-        os_core_api
-        os_libs
+        os_tls
 )
 
 
@@ -94,7 +80,6 @@ add_library(${PROJECT_NAME} INTERFACE)
 
 target_sources(${PROJECT_NAME}
     INTERFACE
-        ${SOURCES}
         "src/rpc/TlsLibServer.c"
 )
 
@@ -103,16 +88,9 @@ target_compile_definitions(${PROJECT_NAME}
         OS_TLS_WITH_RPC_SERVER
 )
 
-target_include_directories(${PROJECT_NAME}
-    INTERFACE
-        "inc"
-)
-
 target_link_libraries(${PROJECT_NAME}
     INTERFACE
-        3rdparty_mbedtls_for_tls
-        os_core_api
-        os_libs
+        os_tls
 )
 
 
