@@ -12,7 +12,7 @@
 
 struct TlsLibClient
 {
-    void* dataport;
+    OS_Dataport_t dataport;
 };
 
 // Private static functions ----------------------------------------------------
@@ -26,7 +26,7 @@ TlsLibClient_init(
 {
     TlsLibClient_t* cli;
 
-    if (NULL == self || NULL == cfg || NULL == cfg->dataport)
+    if (NULL == self || NULL == cfg || OS_DATAPORT_IS_UNSET(cfg->dataport))
     {
         return OS_ERROR_INVALID_PARAMETER;
     }
@@ -82,12 +82,12 @@ TlsLibClient_write(
     {
         return OS_ERROR_INVALID_PARAMETER;
     }
-    else if (dataSize > PAGE_SIZE)
+    else if (dataSize > OS_Dataport_getSize(self->dataport))
     {
         return OS_ERROR_INSUFFICIENT_SPACE;
     }
 
-    memcpy(self->dataport, data, dataSize);
+    memcpy(OS_Dataport_getBuf(self->dataport), data, dataSize);
 
     return TlsLibServer_write(dataSize);
 }
@@ -107,13 +107,13 @@ TlsLibClient_read(
 
     if ((rc = TlsLibServer_read(dataSize)) == OS_SUCCESS)
     {
-        if (*dataSize > PAGE_SIZE)
+        if (*dataSize > OS_Dataport_getSize(self->dataport))
         {
             return OS_ERROR_INSUFFICIENT_SPACE;
         }
         else
         {
-            memcpy(data, self->dataport, *dataSize);
+            memcpy(data, OS_Dataport_getBuf(self->dataport), *dataSize);
         }
     }
 

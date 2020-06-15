@@ -13,7 +13,7 @@
 struct TlsLibServer
 {
     TlsLib_t* library;
-    void* dataport;
+    OS_Dataport_t dataport;
 };
 
 /**
@@ -54,7 +54,7 @@ TlsLibServer_init(
     TlsLibServer_t* svr;
     OS_Error_t err;
 
-    if (NULL == self || NULL == cfg)
+    if (NULL == self || NULL == cfg || OS_DATAPORT_IS_UNSET(cfg->dataport))
     {
         return OS_ERROR_INVALID_PARAMETER;
     }
@@ -114,7 +114,8 @@ TlsLibServer_write(
     TlsLibServer_t* self;
 
     GET_SELF(self);
-    return TlsLib_write(self->library, self->dataport, dataSize);
+    return TlsLib_write(self->library, OS_Dataport_getBuf(self->dataport),
+                        dataSize);
 }
 
 OS_Error_t
@@ -124,7 +125,8 @@ TlsLibServer_read(
     TlsLibServer_t* self;
 
     GET_SELF(self);
-    return TlsLib_read(self->library, self->dataport, dataSize);
+    return TlsLib_read(self->library, OS_Dataport_getBuf(self->dataport),
+                       dataSize);
 }
 
 OS_Error_t
