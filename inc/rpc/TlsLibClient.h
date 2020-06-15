@@ -10,8 +10,8 @@ typedef struct TlsLibClient TlsLibClient_t;
 
 OS_Error_t
 TlsLibClient_init(
-    TlsLibClient_t**             self,
-    const TlsLibClient_Config_t* cfg);
+    TlsLibClient_t**     self,
+    const OS_Dataport_t* dataport);
 
 OS_Error_t
 TlsLibClient_handshake(

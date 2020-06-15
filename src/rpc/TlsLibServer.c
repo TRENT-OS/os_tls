@@ -48,13 +48,13 @@ OS_Tls_getServer(
 
 OS_Error_t
 TlsLibServer_init(
-    TlsLibServer_t**             self,
-    const TlsLibServer_Config_t* cfg)
+    TlsLibServer_t**     self,
+    TlsLib_t*            library,
+    const OS_Dataport_t* dataport)
 {
     TlsLibServer_t* svr;
-    OS_Error_t err;
 
-    if (NULL == self || NULL == cfg || OS_DATAPORT_IS_UNSET(cfg->dataport))
+    if (NULL == self || NULL == dataport || OS_Dataport_isUnset(*dataport))
     {
         return OS_ERROR_INVALID_PARAMETER;
     }
@@ -67,32 +67,24 @@ TlsLibServer_init(
     *self = svr;
 
     memset(svr, 0, sizeof(TlsLibServer_t));
-    svr->dataport = cfg->dataport;
+    svr->dataport = *dataport;
+    svr->library  = library;
 
-    // We need an instance of the library for the server to work with
-    if ((err = TlsLib_init(&svr->library, &cfg->library)) != OS_SUCCESS)
-    {
-        free(svr);
-    }
-
-    return err;
+    return OS_SUCCESS;
 }
 
 OS_Error_t
 TlsLibServer_free(
     TlsLibServer_t* self)
 {
-    OS_Error_t err;
-
     if (NULL == self)
     {
         return OS_ERROR_INVALID_PARAMETER;
     }
 
-    err = TlsLib_free(self->library);
     free(self);
 
-    return err;
+    return OS_SUCCESS;
 }
 
 // RPC functions ---------------------------------------------------------------

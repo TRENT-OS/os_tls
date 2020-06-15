@@ -21,12 +21,12 @@ struct TlsLibClient
 
 OS_Error_t
 TlsLibClient_init(
-    TlsLibClient_t**             self,
-    const TlsLibClient_Config_t* cfg)
+    TlsLibClient_t**     self,
+    const OS_Dataport_t* dataport)
 {
     TlsLibClient_t* cli;
 
-    if (NULL == self || NULL == cfg || OS_DATAPORT_IS_UNSET(cfg->dataport))
+    if (NULL == self || NULL == dataport || OS_Dataport_isUnset(*dataport))
     {
         return OS_ERROR_INVALID_PARAMETER;
     }
@@ -39,7 +39,7 @@ TlsLibClient_init(
     *self = cli;
 
     memset(cli, 0, sizeof(TlsLibClient_t));
-    cli->dataport = cfg->dataport;
+    cli->dataport = *dataport;
 
     return OS_SUCCESS;
 }
