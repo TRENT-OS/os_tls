@@ -17,21 +17,21 @@ TlsLibServer_init(
     const OS_Dataport_t* dataport);
 
 OS_Error_t
-TlsLibServer_handshake(
+TlsLibServer_free(
+    TlsLibServer_t* self);
+
+OS_Error_t
+tls_rpc_handshake(
     void);
 
 OS_Error_t
-TlsLibServer_write(
+tls_rpc_write(
     size_t dataSize);
 
 OS_Error_t
-TlsLibServer_read(
+tls_rpc_read(
     size_t* dataSize);
 
 OS_Error_t
-TlsLibServer_reset(
+tls_rpc_reset(
     void);
-
-OS_Error_t
-TlsLibServer_free(
-    TlsLibServer_t* self);

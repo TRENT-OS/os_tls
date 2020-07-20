@@ -69,7 +69,7 @@ TlsLibClient_handshake(
         return OS_ERROR_INVALID_PARAMETER;
     }
 
-    return TlsLibServer_handshake();
+    return tls_rpc_handshake();
 }
 
 OS_Error_t
@@ -89,7 +89,7 @@ TlsLibClient_write(
 
     memcpy(OS_Dataport_getBuf(self->dataport), data, dataSize);
 
-    return TlsLibServer_write(dataSize);
+    return tls_rpc_write(dataSize);
 }
 
 OS_Error_t
@@ -105,7 +105,7 @@ TlsLibClient_read(
         return OS_ERROR_INVALID_PARAMETER;
     }
 
-    if ((rc = TlsLibServer_read(dataSize)) == OS_SUCCESS)
+    if ((rc = tls_rpc_read(dataSize)) == OS_SUCCESS)
     {
         if (*dataSize > OS_Dataport_getSize(self->dataport))
         {
@@ -129,7 +129,7 @@ TlsLibClient_reset(
         return OS_ERROR_INVALID_PARAMETER;
     }
 
-    return TlsLibServer_reset();
+    return tls_rpc_reset();
 }
 
 #endif /* OS_TLS_WITH_RPC_CLIENT */

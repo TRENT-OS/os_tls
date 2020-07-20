@@ -23,7 +23,7 @@ struct TlsLibServer
  * respective contexts.
  */
 extern OS_Tls_Handle_t
-TlsLibServer_getTls(
+tls_rpc_getTls(
     void);
 
 // This is not exposed via the header
@@ -34,7 +34,7 @@ OS_Tls_getServer(
 // Get SeosTlsRpcServer context from API
 #define GET_SELF(s) {                                   \
     OS_Tls_t *a;                                        \
-    if (((a = TlsLibServer_getTls()) == NULL) ||        \
+    if (((a = tls_rpc_getTls()) == NULL) ||        \
         ((s = OS_Tls_getServer(a)) == NULL) )           \
     {                                                   \
         return OS_ERROR_INVALID_PARAMETER;              \
@@ -90,7 +90,7 @@ TlsLibServer_free(
 // RPC functions ---------------------------------------------------------------
 
 OS_Error_t
-TlsLibServer_handshake(
+tls_rpc_handshake(
     void)
 {
     TlsLibServer_t* self;
@@ -100,7 +100,7 @@ TlsLibServer_handshake(
 }
 
 OS_Error_t
-TlsLibServer_write(
+tls_rpc_write(
     size_t dataSize)
 {
     TlsLibServer_t* self;
@@ -111,7 +111,7 @@ TlsLibServer_write(
 }
 
 OS_Error_t
-TlsLibServer_read(
+tls_rpc_read(
     size_t* dataSize)
 {
     TlsLibServer_t* self;
@@ -122,7 +122,7 @@ TlsLibServer_read(
 }
 
 OS_Error_t
-TlsLibServer_reset(
+tls_rpc_reset(
     void)
 {
     TlsLibServer_t* self;
