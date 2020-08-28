@@ -2,17 +2,14 @@
  * Copyright (C) 2019-2020, Hensoldt Cyber GmbH
  */
 
-#if defined(OS_TLS_WITH_RPC_CLIENT)
-
 #include "rpc/TlsLibClient.h"
-#include "rpc/TlsLibServer.h"
 
 #include <string.h>
 #include <stdlib.h>
 
 struct TlsLibClient
 {
-    OS_Dataport_t dataport;
+    if_OS_Tls_t rpc;
 };
 
 // Private static functions ----------------------------------------------------
@@ -21,12 +18,12 @@ struct TlsLibClient
 
 OS_Error_t
 TlsLibClient_init(
-    TlsLibClient_t**     self,
-    const OS_Dataport_t* dataport)
+    TlsLibClient_t**   self,
+    const if_OS_Tls_t* rpc)
 {
     TlsLibClient_t* cli;
 
-    if (NULL == self || NULL == dataport || OS_Dataport_isUnset(*dataport))
+    if (NULL == self || NULL == rpc || OS_Dataport_isUnset(rpc->dataport))
     {
         return OS_ERROR_INVALID_PARAMETER;
     }
@@ -39,7 +36,7 @@ TlsLibClient_init(
     *self = cli;
 
     memset(cli, 0, sizeof(TlsLibClient_t));
-    cli->dataport = *dataport;
+    cli->rpc = *rpc;
 
     return OS_SUCCESS;
 }
@@ -69,7 +66,7 @@ TlsLibClient_handshake(
         return OS_ERROR_INVALID_PARAMETER;
     }
 
-    return tls_rpc_handshake();
+    return self->rpc.handshake();
 }
 
 OS_Error_t
@@ -82,14 +79,14 @@ TlsLibClient_write(
     {
         return OS_ERROR_INVALID_PARAMETER;
     }
-    else if (dataSize > OS_Dataport_getSize(self->dataport))
+    else if (dataSize > OS_Dataport_getSize(self->rpc.dataport))
     {
         return OS_ERROR_INSUFFICIENT_SPACE;
     }
 
-    memcpy(OS_Dataport_getBuf(self->dataport), data, dataSize);
+    memcpy(OS_Dataport_getBuf(self->rpc.dataport), data, dataSize);
 
-    return tls_rpc_write(dataSize);
+    return self->rpc.write(dataSize);
 }
 
 OS_Error_t
@@ -105,15 +102,15 @@ TlsLibClient_read(
         return OS_ERROR_INVALID_PARAMETER;
     }
 
-    if ((rc = tls_rpc_read(dataSize)) == OS_SUCCESS)
+    if ((rc = self->rpc.read(dataSize)) == OS_SUCCESS)
     {
-        if (*dataSize > OS_Dataport_getSize(self->dataport))
+        if (*dataSize > OS_Dataport_getSize(self->rpc.dataport))
         {
             return OS_ERROR_INSUFFICIENT_SPACE;
         }
         else
         {
-            memcpy(data, OS_Dataport_getBuf(self->dataport), *dataSize);
+            memcpy(data, OS_Dataport_getBuf(self->rpc.dataport), *dataSize);
         }
     }
 
@@ -129,7 +126,5 @@ TlsLibClient_reset(
         return OS_ERROR_INVALID_PARAMETER;
     }
 
-    return tls_rpc_reset();
+    return self->rpc.reset();
 }
-
-#endif /* OS_TLS_WITH_RPC_CLIENT */

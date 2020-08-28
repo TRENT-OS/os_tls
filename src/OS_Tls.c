@@ -5,7 +5,6 @@
 #include "OS_Tls.h"
 
 #include "lib/TlsLib.h"
-#include "rpc/TlsLibServer.h"
 #include "rpc/TlsLibClient.h"
 
 #include <stdio.h>
@@ -16,11 +15,7 @@ struct OS_Tls
 {
     OS_Tls_Mode_t mode;
     TlsLib_t* library;
-    union
-    {
-        void* client;
-        void* server;
-    } rpc;
+    TlsLibClient_t* client;
 };
 
 OS_Error_t
@@ -44,43 +39,26 @@ OS_Tls_init(
     memset(api, 0, sizeof(OS_Tls_t));
     api->mode = cfg->mode;
 
-    if (cfg->mode != OS_Tls_MODE_CLIENT)
+    switch (cfg->mode)
     {
+    case OS_Tls_MODE_LIBRARY:
         if ((err = TlsLib_init(&api->library, &cfg->library)) != OS_SUCCESS)
         {
             goto err0;
         }
-    }
-
-    switch (cfg->mode)
-    {
-    case OS_Tls_MODE_LIBRARY:
-        // Done above.
         break;
-#if defined(OS_TLS_WITH_RPC_CLIENT)
     case OS_Tls_MODE_CLIENT:
-        if ((err = TlsLibClient_init((TlsLibClient_t**) &api->rpc.client,
-                                     &cfg->dataport)) != OS_SUCCESS)
+        if ((err = TlsLibClient_init(&api->client, &cfg->rpc)) != OS_SUCCESS)
         {
             goto err0;
         }
         break;
-#endif /* OS_TLS_WITH_RPC_CLIENT */
-#if defined(OS_TLS_WITH_RPC_SERVER)
-    case OS_Tls_MODE_SERVER:
-        if ((err = TlsLibServer_init((TlsLibServer_t**) &api->rpc.server, api->library,
-                                     &cfg->dataport)) != OS_SUCCESS)
-        {
-            goto err0;
-        }
-        break;
-#endif /* OS_TLS_WITH_RPC_SERVER */
     default:
         err = OS_ERROR_NOT_SUPPORTED;
         goto err0;
     }
 
-    * self = api;
+    *self = api;
 
     return OS_SUCCESS;
 
@@ -101,29 +79,14 @@ OS_Tls_free(
         return OS_ERROR_INVALID_PARAMETER;
     }
 
-    if (self->mode != OS_Tls_MODE_CLIENT)
-    {
-        if ((err = TlsLib_free(self->library)) != OS_SUCCESS)
-        {
-            return err;
-        }
-    }
-
     switch (self->mode)
     {
     case OS_Tls_MODE_LIBRARY:
-        // Nothing to do
+        err = TlsLib_free(self->library);
         break;
-#if defined(OS_TLS_WITH_RPC_CLIENT)
     case OS_Tls_MODE_CLIENT:
-        err = TlsLibClient_free(self->rpc.client);
+        err = TlsLibClient_free(self->client);
         break;
-#endif /* OS_TLS_WITH_RPC_CLIENT */
-#if defined(OS_TLS_WITH_RPC_SERVER)
-    case OS_Tls_MODE_SERVER:
-        err = TlsLibServer_free(self->rpc.server);
-        break;
-#endif /* OS_TLS_WITH_RPC_SERVER */
     default:
         err = OS_ERROR_NOT_SUPPORTED;
     }
@@ -146,10 +109,8 @@ OS_Tls_handshake(
     {
     case OS_Tls_MODE_LIBRARY:
         return TlsLib_handshake(self->library);
-#if defined(OS_TLS_WITH_RPC_CLIENT)
     case OS_Tls_MODE_CLIENT:
-        return TlsLibClient_handshake(self->rpc.client);
-#endif /* OS_TLS_WITH_RPC_CLIENT */
+        return TlsLibClient_handshake(self->client);
     default:
         return OS_ERROR_NOT_SUPPORTED;
     }
@@ -172,10 +133,8 @@ OS_Tls_write(
     {
     case OS_Tls_MODE_LIBRARY:
         return TlsLib_write(self->library, data, dataSize);
-#if defined(OS_TLS_WITH_RPC_CLIENT)
     case OS_Tls_MODE_CLIENT:
-        return TlsLibClient_write(self->rpc.client, data, dataSize);
-#endif /* OS_TLS_WITH_RPC_CLIENT */
+        return TlsLibClient_write(self->client, data, dataSize);
     default:
         return OS_ERROR_NOT_SUPPORTED;
     }
@@ -198,10 +157,8 @@ OS_Tls_read(
     {
     case OS_Tls_MODE_LIBRARY:
         return TlsLib_read(self->library, data, dataSize);
-#if defined(OS_TLS_WITH_RPC_CLIENT)
     case OS_Tls_MODE_CLIENT:
-        return TlsLibClient_read(self->rpc.client, data, dataSize);
-#endif /* OS_TLS_WITH_RPC_CLIENT */
+        return TlsLibClient_read(self->client, data, dataSize);
     default:
         return OS_ERROR_NOT_SUPPORTED;
     }
@@ -222,22 +179,13 @@ OS_Tls_reset(
     {
     case OS_Tls_MODE_LIBRARY:
         return TlsLib_reset(self->library);
-#if defined(OS_TLS_WITH_RPC_CLIENT)
     case OS_Tls_MODE_CLIENT:
-        return TlsLibClient_reset(self->rpc.client);
-#endif /* OS_TLS_WITH_RPC_CLIENT */
+        return TlsLibClient_reset(self->client);
     default:
         return OS_ERROR_NOT_SUPPORTED;
     }
 
     return OS_ERROR_GENERIC;
-}
-
-void*
-OS_Tls_getServer(
-    OS_Tls_Handle_t self)
-{
-    return (NULL == self) ? NULL : self->rpc.server;
 }
 
 OS_Tls_Mode_t

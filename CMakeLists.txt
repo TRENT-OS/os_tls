@@ -1,18 +1,7 @@
 #
 # OS TLS Library
 #
-# We have three library targets:
-# 1. OS_TLS:
-#    Provides only functionality of the TLS library behind calls to the API.
-# 2. OS_TLS_WITH_RPC_CLIENT:
-#    Provides library functionality to execute TLS locally, but also allows
-#    to operate TLS API in RPC client mode, where calls to the API are
-#    transparently mapped to an RPC interface and executed in a separate component
-#    (e.g., the TlsRpcServer)
-# 3. OS_TLS_WITH_RPC_SEVER:
-#    Provides library functionality to execute TLS locally, but also allows
-#    to instantiate the TLS API as RPC server easily, which can then be used
-#    to serve RPC requests from a TLS API RPC client.
+# Copyright (C) 2019-2020, Hensoldt Cyber GmbH
 #
 
 cmake_minimum_required(VERSION 3.13.0)
@@ -31,6 +20,7 @@ target_sources(${PROJECT_NAME}
     INTERFACE
         "src/OS_Tls.c"
         "src/lib/TlsLib.c"
+        "src/rpc/TlsLibClient.c"
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -43,46 +33,4 @@ target_link_libraries(${PROJECT_NAME}
         3rdparty_mbedtls_for_tls
         os_core_api
         os_libs
-)
-
-
-#------------------------------------------------------------------------------
-project(os_tls_with_rpc_client C)
-
-add_library(${PROJECT_NAME} INTERFACE)
-
-target_sources(${PROJECT_NAME}
-    INTERFACE
-        "src/rpc/TlsLibClient.c"
-)
-
-target_compile_definitions(${PROJECT_NAME}
-    INTERFACE
-        OS_TLS_WITH_RPC_CLIENT
-)
-
-target_link_libraries(${PROJECT_NAME}
-    INTERFACE
-        os_tls
-)
-
-
-#------------------------------------------------------------------------------
-project(os_tls_with_rpc_server C)
-
-add_library(${PROJECT_NAME} INTERFACE)
-
-target_sources(${PROJECT_NAME}
-    INTERFACE
-        "src/rpc/TlsLibServer.c"
-)
-
-target_compile_definitions(${PROJECT_NAME}
-    INTERFACE
-        OS_TLS_WITH_RPC_SERVER
-)
-
-target_link_libraries(${PROJECT_NAME}
-    INTERFACE
-        os_tls
 )
