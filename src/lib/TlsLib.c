@@ -158,24 +158,12 @@ checkSuites(
     return OS_SUCCESS;
 }
 
-static OS_Error_t
-validatePolicy(
-    const TlsLib_Config_t* cfg,
+static inline bool
+isPolicySessionAndSignatureDigestsOk(
     const OS_Tls_Policy_t* policy)
 {
-    size_t i;
-    bool checkDH, checkRSA;
-
-    if (policy->sessionDigestsLen < 0
-        || policy->sessionDigestsLen > OS_Tls_MAX_DIGESTS ||
-        policy->signatureDigestsLen < 0
-        || policy->signatureDigestsLen > OS_Tls_MAX_DIGESTS )
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
-
     // Check the session digests and signature digests
-    for (i = 0; i < OS_Tls_MAX_DIGESTS; i++)
+    for (size_t i = 0; i < OS_Tls_MAX_DIGESTS; i++)
     {
         if (i < policy->sessionDigestsLen)
         {
@@ -184,7 +172,7 @@ validatePolicy(
             case OS_Tls_DIGEST_SHA256:
                 break;
             default:
-                return OS_ERROR_NOT_SUPPORTED;
+                return false;
             }
         }
         if (i < policy->signatureDigestsLen)
@@ -194,17 +182,25 @@ validatePolicy(
             case OS_Tls_DIGEST_SHA256:
                 break;
             default:
-                return OS_ERROR_NOT_SUPPORTED;
+                return false;
             }
         }
     }
+    return true;
+}
 
+static inline bool
+isPolicyManagedByCryptoLib(
+    const TlsLib_Config_t* cfg,
+    const OS_Tls_Policy_t* policy)
+
+{
+    bool checkDH    = false;
+    bool checkRSA   = false;
     // We need to validate that the policy chosen does actually work with the
     // crypto library. Only validate those params that are actually relevant
     // for the selected ciphersuites...
-    checkDH = false;
-    checkRSA = false;
-    for (i = 0; i < cfg->crypto.cipherSuitesLen; i++)
+    for (size_t i = 0; i < cfg->crypto.cipherSuitesLen; i++)
     {
         switch (cfg->crypto.cipherSuites[i])
         {
@@ -216,17 +212,38 @@ validatePolicy(
             checkDH  = true;
             break;
         default:
-            return OS_ERROR_NOT_SUPPORTED;
+            return false;
         }
     }
 
     if (checkRSA && ((policy->rsaMinBits > (OS_CryptoKey_SIZE_RSA_MAX * 8)) ||
                      (policy->rsaMinBits < (OS_CryptoKey_SIZE_RSA_MIN * 8))))
     {
-        return OS_ERROR_NOT_SUPPORTED;
+        return false;
     }
     if (checkDH && ((policy->dhMinBits > (OS_CryptoKey_SIZE_DH_MAX * 8)) ||
                     (policy->dhMinBits < (OS_CryptoKey_SIZE_DH_MIN * 8))))
+    {
+        return false;
+    }
+    return true;
+}
+
+static OS_Error_t
+validatePolicy(
+    const TlsLib_Config_t* cfg,
+    const OS_Tls_Policy_t* policy)
+{
+    if (policy->sessionDigestsLen < 0
+        || policy->sessionDigestsLen > OS_Tls_MAX_DIGESTS ||
+        policy->signatureDigestsLen < 0
+        || policy->signatureDigestsLen > OS_Tls_MAX_DIGESTS )
+    {
+        return OS_ERROR_INVALID_PARAMETER;
+    }
+
+    if (!isPolicySessionAndSignatureDigestsOk(policy) ||
+        !isPolicyManagedByCryptoLib(cfg, policy))
     {
         return OS_ERROR_NOT_SUPPORTED;
     }
@@ -481,6 +498,40 @@ resetImpl(
            OS_SUCCESS : OS_ERROR_ABORTED;
 }
 
+static inline bool
+isInitParametersOk(
+    TlsLib_t**             self,
+    const TlsLib_Config_t* cfg)
+{
+    if (NULL == self || NULL == cfg)
+    {
+        return false;
+    }
+
+    if (NULL == cfg->crypto.handle)
+    {
+        Debug_LOG_ERROR("Crypto context is NULL");
+        return false;
+    }
+
+    if (NULL == cfg->socket.recv || NULL == cfg->socket.send)
+    {
+        Debug_LOG_ERROR("Socket callbacks for send/recv are not set");
+        return false;
+    }
+
+    if (!(cfg->flags & OS_Tls_FLAG_NO_VERIFY) &&
+        (strstr(cfg->crypto.caCert, "-----BEGIN CERTIFICATE-----") == NULL ||
+         strstr(cfg->crypto.caCert, "-----END CERTIFICATE-----") == NULL) )
+    {
+        Debug_LOG_ERROR("Presented CA cert is not valid (maybe not PEM encoded?)");
+        return false;
+    }
+
+    return true;
+}
+
+
 // Public functions ------------------------------------------------------------
 
 OS_Error_t
@@ -491,32 +542,16 @@ TlsLib_init(
     OS_Error_t err;
     TlsLib_t* lib;
 
-    if (NULL == self || NULL == cfg)
+    if (!isInitParametersOk(self, cfg))
     {
         return OS_ERROR_INVALID_PARAMETER;
     }
-    else if (NULL == cfg->crypto.handle)
-    {
-        Debug_LOG_ERROR("Crypto context is NULL");
-        return OS_ERROR_INVALID_PARAMETER;
-    }
-    else if ((err = checkSuites(cfg->crypto.cipherSuites,
-                                cfg->crypto.cipherSuitesLen)) != OS_SUCCESS)
+
+    if ((err = checkSuites(cfg->crypto.cipherSuites,
+                           cfg->crypto.cipherSuitesLen)) != OS_SUCCESS)
     {
         Debug_LOG_ERROR("Invalid selection of ciphersuites or too many ciphersuites given");
         return err;
-    }
-    else if (NULL == cfg->socket.recv || NULL == cfg->socket.send)
-    {
-        Debug_LOG_ERROR("Socket callbacks for send/recv are not set");
-        return OS_ERROR_INVALID_PARAMETER;
-    }
-    else if (!(cfg->flags & OS_Tls_FLAG_NO_VERIFY) &&
-             (strstr(cfg->crypto.caCert, "-----BEGIN CERTIFICATE-----") == NULL ||
-              strstr(cfg->crypto.caCert, "-----END CERTIFICATE-----") == NULL) )
-    {
-        Debug_LOG_ERROR("Presented CA cert is not valid (maybe not PEM encoded?)");
-        return OS_ERROR_INVALID_PARAMETER;
     }
 
     if ((lib = malloc(sizeof(TlsLib_t))) == NULL)
