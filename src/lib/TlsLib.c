@@ -395,20 +395,18 @@ handshakeImpl(
 
     for (;;)
     {
-        if ((rc = mbedtls_ssl_handshake(&self->mbedtls.ssl)) == 0)
+        rc = mbedtls_ssl_handshake(&self->mbedtls.ssl);
+        switch (rc)
         {
+        case 0:
             return OS_SUCCESS;
-        }
-        else if ((rc == MBEDTLS_ERR_SSL_WANT_READ) ||
-                 (rc == MBEDTLS_ERR_SSL_WANT_WRITE) )
-        {
-            // mbedTLS required looping over mbedtls_ssl_handshake() for the handshake.
-            // This leave more control for the calling application, but since we don't
-            // need such detail at the moment, it's wrapped in this function
-            continue;
-        }
-        else
-        {
+        case MBEDTLS_ERR_SSL_WANT_READ:
+        case MBEDTLS_ERR_SSL_WANT_WRITE:
+            // The send/recv callbacks would send WANT_READ/WANT_WRITE in case
+            // the socket I/O would block (e.g., 0 bytes available on read())
+            Debug_LOG_INFO("mbedtls_ssl_handshake() would block");
+            return OS_ERROR_WOULD_BLOCK;
+        default:
             Debug_LOG_ERROR("mbedtls_ssl_handshake() failed with 0x%04x", rc);
             return OS_ERROR_ABORTED;
         }
@@ -429,10 +427,21 @@ writeImpl(
 
     while (to_write > 0)
     {
-        if ((rc = mbedtls_ssl_write(&self->mbedtls.ssl, data + offs, to_write)) <= 0)
+        rc = mbedtls_ssl_write(&self->mbedtls.ssl, data + offs, to_write);
+        if (rc <= 0)
         {
-            Debug_LOG_ERROR("mbedtls_ssl_write() failed with 0x%04x", rc);
-            return OS_ERROR_ABORTED;
+            switch (rc)
+            {
+            case MBEDTLS_ERR_SSL_WANT_WRITE:
+                // The write would block for some reason, even after we have done
+                // some partial writing. If we should not block ourselves, then
+                // return with OS_ERROR_WOULD_BLOCK. Otherwise, keep trying..
+                Debug_LOG_INFO("mbedtls_ssl_write() would block");
+                return OS_ERROR_WOULD_BLOCK;
+            default:
+                Debug_LOG_ERROR("mbedtls_ssl_write() failed with 0x%04x", rc);
+                return OS_ERROR_ABORTED;
+            }
         }
         // Update pointer/len in case of partial writes
         to_write  -= rc;
@@ -468,6 +477,10 @@ readImpl(
                 // count this as success but terminate the SSL session here.
                 self->open = false;
                 return OS_SUCCESS;
+            case MBEDTLS_ERR_SSL_WANT_READ:
+                // There were no bytes to read without blocking
+                Debug_LOG_INFO("mbedtls_ssl_read() would block");
+                return OS_ERROR_WOULD_BLOCK;
             default:
                 Debug_LOG_ERROR("mbedtls_ssl_read() failed with 0x%04x", rc);
                 return OS_ERROR_ABORTED;
