@@ -42,9 +42,9 @@ TlsLib_handshake(
 
 OS_Error_t
 TlsLib_write(
-    TlsLib_t*    self,
-    const void*  data,
-    const size_t dataSize);
+    TlsLib_t*   self,
+    const void* data,
+    size_t*     dataSize);
 
 OS_Error_t
 TlsLib_read(

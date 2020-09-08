@@ -21,7 +21,7 @@ OS_Error_t
 TlsLibClient_write(
     TlsLibClient_t* self,
     const void*     data,
-    const size_t    dataSize);
+    size_t*         dataSize);
 
 OS_Error_t
 TlsLibClient_read(

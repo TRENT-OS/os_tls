@@ -417,15 +417,16 @@ handshakeImpl(
 
 static OS_Error_t
 writeImpl(
-    TlsLib_t*    self,
-    const void*  data,
-    const size_t dataSize)
+    TlsLib_t*   self,
+    const void* data,
+    size_t*     dataSize)
 {
     int rc;
-    size_t written, to_write, offs;
+    size_t to_write, offs;
 
-    to_write = dataSize;
+    to_write = *dataSize;
     offs     = 0;
+
     while (to_write > 0)
     {
         if ((rc = mbedtls_ssl_write(&self->mbedtls.ssl, data + offs, to_write)) <= 0)
@@ -433,10 +434,11 @@ writeImpl(
             Debug_LOG_ERROR("mbedtls_ssl_write() failed with 0x%04x", rc);
             return OS_ERROR_ABORTED;
         }
-        written  = rc;
-        // Handle cases where we write only parts
-        to_write = to_write - written;
-        offs     = offs     + written;
+        // Update pointer/len in case of partial writes
+        to_write  -= rc;
+        offs      += rc;
+        // Give back the amount of bytes actually written
+        *dataSize  = offs;
     }
 
     return OS_SUCCESS;
@@ -598,11 +600,11 @@ TlsLib_handshake(
 
 OS_Error_t
 TlsLib_write(
-    TlsLib_t*    self,
-    const void*  data,
-    const size_t dataSize)
+    TlsLib_t*   self,
+    const void* data,
+    size_t*     dataSize)
 {
-    if (NULL == self || NULL == data || 0 == dataSize)
+    if (NULL == self || NULL == data || NULL == dataSize || 0 == *dataSize)
     {
         return OS_ERROR_INVALID_PARAMETER;
     }

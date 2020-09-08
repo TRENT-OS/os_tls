@@ -26,7 +26,7 @@ tls_rpc_handshake(
 
 OS_Error_t
 tls_rpc_write(
-    size_t dataSize);
+    size_t* dataSize);
 
 OS_Error_t
 tls_rpc_read(

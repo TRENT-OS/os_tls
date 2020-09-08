@@ -76,18 +76,18 @@ OS_Error_t
 TlsLibClient_write(
     TlsLibClient_t* self,
     const void*     data,
-    const size_t    dataSize)
+    size_t*         dataSize)
 {
-    if (NULL == self || NULL == data)
+    if (NULL == self || NULL == data || NULL == dataSize)
     {
         return OS_ERROR_INVALID_PARAMETER;
     }
-    else if (dataSize > OS_Dataport_getSize(self->dataport))
+    else if (*dataSize > OS_Dataport_getSize(self->dataport))
     {
         return OS_ERROR_INSUFFICIENT_SPACE;
     }
 
-    memcpy(OS_Dataport_getBuf(self->dataport), data, dataSize);
+    memcpy(OS_Dataport_getBuf(self->dataport), data, *dataSize);
 
     return tls_rpc_write(dataSize);
 }
