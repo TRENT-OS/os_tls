@@ -432,6 +432,12 @@ writeImpl(
         {
             switch (rc)
             {
+            case 0:
+                // Server can send empty messages for randomization purposes,
+                // so this is not an error but we may want to notify the user
+                // anyways..
+                Debug_LOG_INFO("mbedtls_ssl_write() wrote 0 bytes");
+                continue;
             case MBEDTLS_ERR_SSL_WANT_WRITE:
                 // The write would block for some reason, even after we have done
                 // some partial writing. If we should not block ourselves, then
@@ -472,6 +478,12 @@ readImpl(
         {
             switch (rc)
             {
+            case 0:
+                // Server can send empty messages for randomization purposes,
+                // so this is not an error but we may want to notify the user
+                // anyways..
+                Debug_LOG_INFO("mbedtls_ssl_read() read 0 bytes");
+                continue;
             case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
                 // Server has signaled that the connection will be closed; we
                 // count this as success but terminate the SSL session here.
