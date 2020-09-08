@@ -468,28 +468,36 @@ readImpl(
     size_t*   dataSize)
 {
     int rc;
+    size_t to_read, offs;
 
-    rc = mbedtls_ssl_read(&self->mbedtls.ssl, data, *dataSize);
-    if (rc > 0)
+    to_read = *dataSize;
+    offs    = 0;
+
+    while (to_read > 0)
     {
-        // We got some data
-        *dataSize = rc;
-        return OS_SUCCESS;
+        rc = mbedtls_ssl_read(&self->mbedtls.ssl, data + offs, to_read);
+        if (rc <= 0)
+        {
+            switch (rc)
+            {
+            case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
+                // Server has signaled that the connection will be closed; we
+                // count this as success but terminate the SSL session here.
+                self->open = false;
+                return OS_SUCCESS;
+            default:
+                Debug_LOG_ERROR("mbedtls_ssl_read() failed with 0x%04x", rc);
+                return OS_ERROR_ABORTED;
+            }
+        }
+        // Update pointer/len in case of partial read
+        to_read  -= rc;
+        offs     += rc;
+        // Give back amount of bytes actually read
+        *dataSize = offs;
     }
 
-    switch (rc)
-    {
-    case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
-        // Server has signaled that the connection will be closed; so we know
-        // that there will be no more data
-        *dataSize = 0;
-        self->open = false;
-        return OS_SUCCESS;
-    }
-
-    Debug_LOG_ERROR("mbedtls_ssl_read() failed with 0x%04x", rc);
-
-    return OS_ERROR_ABORTED;
+    return OS_SUCCESS;
 }
 
 static OS_Error_t
