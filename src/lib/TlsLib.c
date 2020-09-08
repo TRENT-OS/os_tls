@@ -422,7 +422,11 @@ handshakeImpl(
             // The send/recv callbacks would send WANT_READ/WANT_WRITE in case
             // the socket I/O would block (e.g., 0 bytes available on read())
             Debug_LOG_INFO("mbedtls_ssl_handshake() would block");
-            return OS_ERROR_WOULD_BLOCK;
+            if (self->cfg.flags & OS_Tls_FLAG_NON_BLOCKING)
+            {
+                return OS_ERROR_WOULD_BLOCK;
+            }
+            continue;
         default:
             Debug_LOG_ERROR("mbedtls_ssl_handshake() failed with 0x%04x", rc);
             return OS_ERROR_ABORTED;
@@ -460,7 +464,11 @@ writeImpl(
                 // some partial writing. If we should not block ourselves, then
                 // return with OS_ERROR_WOULD_BLOCK. Otherwise, keep trying..
                 Debug_LOG_INFO("mbedtls_ssl_write() would block");
-                return OS_ERROR_WOULD_BLOCK;
+                if (self->cfg.flags & OS_Tls_FLAG_NON_BLOCKING)
+                {
+                    return OS_ERROR_WOULD_BLOCK;
+                }
+                continue;
             default:
                 Debug_LOG_ERROR("mbedtls_ssl_write() failed with 0x%04x", rc);
                 return OS_ERROR_ABORTED;
@@ -509,7 +517,11 @@ readImpl(
             case MBEDTLS_ERR_SSL_WANT_READ:
                 // There were no bytes to read without blocking
                 Debug_LOG_INFO("mbedtls_ssl_read() would block");
-                return OS_ERROR_WOULD_BLOCK;
+                if (self->cfg.flags & OS_Tls_FLAG_NON_BLOCKING)
+                {
+                    return OS_ERROR_WOULD_BLOCK;
+                }
+                continue;
             default:
                 Debug_LOG_ERROR("mbedtls_ssl_read() failed with 0x%04x", rc);
                 return OS_ERROR_ABORTED;
