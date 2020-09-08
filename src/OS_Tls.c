@@ -122,7 +122,7 @@ OS_Error_t
 OS_Tls_write(
     OS_Tls_Handle_t self,
     const void*     data,
-    const size_t    dataSize)
+    size_t*         dataSize)
 {
     if (NULL == self)
     {
