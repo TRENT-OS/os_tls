@@ -271,7 +271,7 @@ setCertProfile(
             profile->allowed_pks |= MBEDTLS_X509_ID_FLAG(MBEDTLS_PK_RSA);
             break;
         default:
-            Debug_LOG_ERROR("Ciphersuite %04x is not supported", suites[i]);
+            Debug_LOG_ERROR("Ciphersuite 0x%04x is not supported", suites[i]);
         }
     }
 
@@ -283,7 +283,7 @@ setCertProfile(
             profile->allowed_mds |= MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA256 );
             break;
         default:
-            Debug_LOG_ERROR("Signature digest %02x is not supported",
+            Debug_LOG_ERROR("Signature digest 0x%02x is not supported",
                             policy->signatureDigests[i]);
         }
     }
@@ -304,7 +304,7 @@ initImpl(
                                           MBEDTLS_SSL_TRANSPORT_STREAM,
                                           MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
     {
-        Debug_LOG_ERROR("mbedtls_ssl_config_defaults() with code 0x%04x", rc);
+        Debug_LOG_ERROR("mbedtls_ssl_config_defaults() failed with 0x%04x", rc);
         goto err0;
     }
 
@@ -347,7 +347,7 @@ initImpl(
                                          (const unsigned char*)self->cfg.crypto.caCert,
                                          strlen(self->cfg.crypto.caCert) + 1)) != 0)
         {
-            Debug_LOG_ERROR("mbedtls_x509_crt_parse() with code 0x%04x", rc);
+            Debug_LOG_ERROR("mbedtls_x509_crt_parse() failed with 0x%04x", rc);
             goto err1;
         }
         mbedtls_ssl_conf_ca_chain(&self->mbedtls.conf, &self->mbedtls.cert, NULL);
@@ -371,7 +371,7 @@ initImpl(
 
     if ((rc = mbedtls_ssl_setup(&self->mbedtls.ssl, &self->mbedtls.conf)) != 0)
     {
-        Debug_LOG_ERROR("mbedtls_ssl_setup() with code 0x%04x", rc);
+        Debug_LOG_ERROR("mbedtls_ssl_setup() failed with 0x%04x", rc);
         goto err2;
     }
 
@@ -426,7 +426,7 @@ handshakeImpl(
         }
         else
         {
-            Debug_LOG_ERROR("mbedtls_ssl_handshake() with code -0x%04x", -rc);
+            Debug_LOG_ERROR("mbedtls_ssl_handshake() failed with 0x%04x", rc);
             return OS_ERROR_ABORTED;
         }
     }
@@ -447,7 +447,7 @@ writeImpl(
     {
         if ((rc = mbedtls_ssl_write(&self->mbedtls.ssl, data + offs, to_write)) <= 0)
         {
-            Debug_LOG_ERROR("mbedtls_ssl_write() with code 0x%04x", rc);
+            Debug_LOG_ERROR("mbedtls_ssl_write() failed with 0x%04x", rc);
             return OS_ERROR_ABORTED;
         }
         written  = rc;
@@ -485,7 +485,7 @@ readImpl(
         return OS_SUCCESS;
     }
 
-    Debug_LOG_ERROR("mbedtls_ssl_read() with code 0x%04x", rc);
+    Debug_LOG_ERROR("mbedtls_ssl_read() failed with 0x%04x", rc);
 
     return OS_ERROR_ABORTED;
 }
