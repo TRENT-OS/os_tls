@@ -60,6 +60,14 @@ logDebug(
         line,
         str);
 
+    // mbedtls attaches its own next line char. This results in extra empty
+    // lines which we don't want (because Debug_LOG_XXX adds another '\n').
+    size_t msg_len = strlen(msg);
+    if (msg_len > 0 && msg[msg_len - 1] == '\n')
+    {
+        msg[msg_len - 1] = '\0';
+    }
+
     // Translate mbedTLS level to appropriate debug output
     switch (level)
     {
