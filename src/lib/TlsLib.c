@@ -512,6 +512,7 @@ readImpl(
             case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
                 // Server has signaled that the connection will be closed; we
                 // count this as success but terminate the SSL session here.
+                Debug_LOG_INFO("host has signaled that connection will be closed");
                 self->open = false;
                 return OS_SUCCESS;
             case MBEDTLS_ERR_SSL_WANT_READ:
