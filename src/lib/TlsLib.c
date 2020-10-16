@@ -117,14 +117,14 @@ derivePolicy(
     static const OS_Tls_Policy_t policies[__OS_Tls_CIPHERSUITE_MAX] =
     {
         [OS_Tls_CIPHERSUITE_DHE_RSA_WITH_AES_128_GCM_SHA256] = {
-            .sessionDigests   = OS_Tls_DIGEST_FLAGS(OS_Tls_DIGEST_SHA256),
-            .signatureDigests = OS_Tls_DIGEST_FLAGS(OS_Tls_DIGEST_SHA256),
+            .handshakeDigests = OS_Tls_DIGEST_FLAGS(OS_Tls_DIGEST_SHA256),
+            .certDigests      = OS_Tls_DIGEST_FLAGS(OS_Tls_DIGEST_SHA256),
             .rsaMinBits       = 2048,
             .dhMinBits        = 2048,
         },
         [OS_Tls_CIPHERSUITE_ECDHE_RSA_WITH_AES_128_GCM_SHA256] = {
-            .sessionDigests   = OS_Tls_DIGEST_FLAGS(OS_Tls_DIGEST_SHA256),
-            .signatureDigests = OS_Tls_DIGEST_FLAGS(OS_Tls_DIGEST_SHA256),
+            .handshakeDigests = OS_Tls_DIGEST_FLAGS(OS_Tls_DIGEST_SHA256),
+            .certDigests      = OS_Tls_DIGEST_FLAGS(OS_Tls_DIGEST_SHA256),
             .rsaMinBits       = 2048,
             .dhMinBits        = MIN_BITS_UNLIMITED,
         },
@@ -143,8 +143,8 @@ derivePolicy(
         {
             policy->dhMinBits  = getMinOf(policy->dhMinBits, policies[i].dhMinBits);
             policy->rsaMinBits = getMinOf(policy->rsaMinBits, policies[i].rsaMinBits);
-            policy->signatureDigests |= policies[i].signatureDigests;
-            policy->sessionDigests   |= policies[i].sessionDigests;
+            policy->certDigests      |= policies[i].certDigests;
+            policy->handshakeDigests |= policies[i].handshakeDigests;
         }
     }
 }
@@ -158,7 +158,7 @@ checkPolicy(
     bool checkRSA = false;
 
     // Digest flags cannot be unset
-    if (!policy->sessionDigests || !policy->signatureDigests)
+    if (!policy->handshakeDigests || !policy->certDigests)
     {
         return false;
     }
@@ -217,7 +217,7 @@ setMbedTlsCertProfile(
     }
     for (i = 0; i < __OS_Tls_DIGEST_MAX; i++)
     {
-        if (self->policy.signatureDigests & OS_Tls_DIGEST_FLAGS(i))
+        if (self->policy.certDigests & OS_Tls_DIGEST_FLAGS(i))
         {
             profile->allowed_mds |= MBEDTLS_X509_ID_FLAG(digests[i]);
         }
@@ -267,7 +267,7 @@ setMbedTlsSigHashes(
     num = 0;
     for (i = 0; i < __OS_Tls_DIGEST_MAX; i++)
     {
-        if (self->policy.sessionDigests & OS_Tls_DIGEST_FLAGS(i))
+        if (self->policy.handshakeDigests & OS_Tls_DIGEST_FLAGS(i))
         {
             sigHashes[num++] = digests[i];
         }
