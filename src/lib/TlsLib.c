@@ -24,6 +24,8 @@ struct TlsLib
         mbedtls_x509_crt_profile certProfile;
         int cipherSuites[__OS_Tls_CIPHERSUITE_MAX];
         int sigHashes[__OS_Tls_DIGEST_MAX];
+        unsigned char* caCerts;
+        size_t caCertLen;
     } mbedtls;
     TlsLib_Config_t cfg;
     OS_Tls_Policy_t policy;
@@ -277,6 +279,29 @@ setMbedTlsSigHashes(
     sigHashes[num] = MBEDTLS_MD_NONE;
 }
 
+static bool
+setMbedTlsCerts(
+    const TlsLib_t* self,
+    size_t*         caCertLen,
+    unsigned char** caCerts)
+{
+    size_t len;
+    unsigned char* cert;
+
+    len = strlen(self->cfg.crypto.caCerts);
+    if ((cert = calloc(1, len + 1)) == NULL)
+    {
+        return false;
+    }
+
+    memcpy(cert, self->cfg.crypto.caCerts, len);
+
+    *caCertLen = len + 1;
+    *caCerts   = cert;
+
+    return true;
+}
+
 static OS_Error_t
 initImpl(
     TlsLib_t* self)
@@ -298,6 +323,13 @@ initImpl(
     setMbedTlsCipherSuites(self, self->mbedtls.cipherSuites);
     setMbedTlsSigHashes(self, self->mbedtls.sigHashes);
     setMbedTlsCertProfile(self, &self->mbedtls.certProfile);
+    // Make local copy of ca cert list
+    if (!(self->cfg.flags & OS_Tls_FLAG_NO_VERIFY) &&
+        !setMbedTlsCerts(self, &self->mbedtls.caCertLen, &self->mbedtls.caCerts))
+    {
+        Debug_LOG_INFO("Could not copy CA cert(s)");
+        return OS_ERROR_INSUFFICIENT_SPACE;
+    }
 
     // Which ciphersuites are allowed? This heavily depends on the state of the
     // modified mbedTLS and cannot simply be changed!!
@@ -330,9 +362,8 @@ initImpl(
     else
     {
         mbedtls_x509_crt_init(&self->mbedtls.cert);
-        if ((rc = mbedtls_x509_crt_parse(&self->mbedtls.cert,
-                                         (const unsigned char*)self->cfg.crypto.caCert,
-                                         strlen(self->cfg.crypto.caCert) + 1)) != 0)
+        if ((rc = mbedtls_x509_crt_parse(&self->mbedtls.cert, self->mbedtls.caCerts,
+                                         self->mbedtls.caCertLen)) != 0)
         {
             Debug_LOG_ERROR("mbedtls_x509_crt_parse() failed with 0x%04x", rc);
             goto err1;
@@ -387,6 +418,7 @@ freeImpl(
         mbedtls_x509_crt_free(&self->mbedtls.cert);
     }
     mbedtls_ssl_config_free(&self->mbedtls.conf);
+    free(self->mbedtls.caCerts);
 
     return OS_SUCCESS;
 }
@@ -564,12 +596,20 @@ checkParams(
         return false;
     }
 
-    if (!(cfg->flags & OS_Tls_FLAG_NO_VERIFY) &&
-        (strstr(cfg->crypto.caCert, "-----BEGIN CERTIFICATE-----") == NULL ||
-         strstr(cfg->crypto.caCert, "-----END CERTIFICATE-----") == NULL) )
+    if (!(cfg->flags & OS_Tls_FLAG_NO_VERIFY))
     {
-        Debug_LOG_ERROR("Presented CA cert is not valid (maybe not PEM encoded?)");
-        return false;
+        if (NULL == cfg->crypto.caCerts || strlen(cfg->crypto.caCerts) == 0)
+        {
+            Debug_LOG_ERROR("No CA cert(s) given");
+            return false;
+        }
+        if ( (strstr(cfg->crypto.caCerts, "-----BEGIN CERTIFICATE-----") == NULL ||
+              strstr(cfg->crypto.caCerts, "-----END CERTIFICATE-----") == NULL) )
+        {
+            Debug_LOG_ERROR("Presented CA cert(s) does not have BEGIN/END "
+                            "(maybe it is not PEM encoded?)");
+            return false;
+        }
     }
 
     if (!cfg->crypto.cipherSuites)
