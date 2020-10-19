@@ -22,10 +22,14 @@ struct TlsLib
         mbedtls_ssl_config conf;
         mbedtls_x509_crt cert;
         mbedtls_x509_crt_profile certProfile;
+        int cipherSuites[__OS_Tls_CIPHERSUITE_MAX];
+        int sigHashes[__OS_Tls_DIGEST_MAX];
     } mbedtls;
     TlsLib_Config_t cfg;
     OS_Tls_Policy_t policy;
 };
+
+#define MIN_BITS_UNLIMITED ((size_t) -1)
 
 // Private static functions ----------------------------------------------------
 
@@ -105,198 +109,172 @@ getMinOf(
     return (a < b) ? a : b;
 }
 
-static OS_Error_t
+static void
 derivePolicy(
     const TlsLib_Config_t* cfg,
     OS_Tls_Policy_t*       policy)
 {
+    static const OS_Tls_Policy_t policies[__OS_Tls_CIPHERSUITE_MAX] =
+    {
+        [OS_Tls_CIPHERSUITE_DHE_RSA_WITH_AES_128_GCM_SHA256] = {
+            .sessionDigests   = OS_Tls_DIGEST_FLAGS(OS_Tls_DIGEST_SHA256),
+            .signatureDigests = OS_Tls_DIGEST_FLAGS(OS_Tls_DIGEST_SHA256),
+            .rsaMinBits       = 2048,
+            .dhMinBits        = 2048,
+        },
+        [OS_Tls_CIPHERSUITE_ECDHE_RSA_WITH_AES_128_GCM_SHA256] = {
+            .sessionDigests   = OS_Tls_DIGEST_FLAGS(OS_Tls_DIGEST_SHA256),
+            .signatureDigests = OS_Tls_DIGEST_FLAGS(OS_Tls_DIGEST_SHA256),
+            .rsaMinBits       = 2048,
+            .dhMinBits        = MIN_BITS_UNLIMITED,
+        },
+    };
+
     memset(policy, 0, sizeof(OS_Tls_Policy_t));
-    policy->dhMinBits  = 9999;
-    policy->rsaMinBits = 9999;
+    policy->dhMinBits  = MIN_BITS_UNLIMITED;
+    policy->rsaMinBits = MIN_BITS_UNLIMITED;
 
     // Here we go through the ciphersuites given and derive appropriate security
     // parameters. The result will be the based on the WEAKEST ciphersuite given
     // by the user -- think a moment, this DOES make sense.
-    for (size_t i = 0; i < cfg->crypto.cipherSuitesLen; i++)
+    for (size_t i = 0; i < __OS_Tls_CIPHERSUITE_MAX; i++)
     {
-        switch (cfg->crypto.cipherSuites[i])
+        if (cfg->crypto.cipherSuites & OS_Tls_CIPHERSUITE_FLAGS(i))
         {
-        // Careful, this is a FALLTHROUGH!
-        case OS_Tls_CIPHERSUITE_DHE_RSA_WITH_AES_128_GCM_SHA256:
-            policy->dhMinBits   = getMinOf(policy->dhMinBits,  2048);
-        case OS_Tls_CIPHERSUITE_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
-            policy->rsaMinBits  = getMinOf(policy->rsaMinBits, 2048);
-            policy->signatureDigests[policy->signatureDigestsLen++] =
-                OS_Tls_DIGEST_SHA256;
-            policy->sessionDigests[policy->sessionDigestsLen++]     =
-                OS_Tls_DIGEST_SHA256;
-            break;
-        default:
-            return OS_ERROR_NOT_SUPPORTED;
+            policy->dhMinBits  = getMinOf(policy->dhMinBits, policies[i].dhMinBits);
+            policy->rsaMinBits = getMinOf(policy->rsaMinBits, policies[i].rsaMinBits);
+            policy->signatureDigests |= policies[i].signatureDigests;
+            policy->sessionDigests   |= policies[i].sessionDigests;
         }
     }
-
-    return OS_SUCCESS;
 }
 
-static OS_Error_t
-checkSuites(
-    const OS_Tls_CipherSuite_t* suites,
-    const size_t                numSuites)
-{
-    size_t i;
-
-    if (numSuites <= 0 || numSuites > OS_Tls_MAX_CIPHERSUITES)
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
-
-    for (i = 0; i < numSuites; i++)
-    {
-        switch (suites[i])
-        {
-        case OS_Tls_CIPHERSUITE_DHE_RSA_WITH_AES_128_GCM_SHA256:
-        case OS_Tls_CIPHERSUITE_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
-            break;
-        default:
-            return OS_ERROR_NOT_SUPPORTED;
-        }
-    }
-
-    return OS_SUCCESS;
-}
-
-static inline bool
-isPolicySessionAndSignatureDigestsOk(
-    const OS_Tls_Policy_t* policy)
-{
-    // Check the session digests and signature digests
-    for (size_t i = 0; i < OS_Tls_MAX_DIGESTS; i++)
-    {
-        if (i < policy->sessionDigestsLen)
-        {
-            switch (policy->sessionDigests[i])
-            {
-            case OS_Tls_DIGEST_SHA256:
-                break;
-            default:
-                return false;
-            }
-        }
-        if (i < policy->signatureDigestsLen)
-        {
-            switch (policy->signatureDigests[i])
-            {
-            case OS_Tls_DIGEST_SHA256:
-                break;
-            default:
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
-static inline bool
-isPolicyManagedByCryptoLib(
+static bool
+checkPolicy(
     const TlsLib_Config_t* cfg,
     const OS_Tls_Policy_t* policy)
-
 {
-    bool checkDH    = false;
-    bool checkRSA   = false;
-    // We need to validate that the policy chosen does actually work with the
-    // crypto library. Only validate those params that are actually relevant
-    // for the selected ciphersuites...
-    for (size_t i = 0; i < cfg->crypto.cipherSuitesLen; i++)
+    bool checkDH  = false;
+    bool checkRSA = false;
+
+    // Digest flags cannot be unset
+    if (!policy->sessionDigests || !policy->signatureDigests)
     {
-        switch (cfg->crypto.cipherSuites[i])
-        {
-        case OS_Tls_CIPHERSUITE_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
-            checkRSA = true;
-            break;
-        case OS_Tls_CIPHERSUITE_DHE_RSA_WITH_AES_128_GCM_SHA256:
-            checkRSA = true;
-            checkDH  = true;
-            break;
-        default:
-            return false;
-        }
+        return false;
     }
 
+    // OS_Tls_CIPHERSUITE_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+    checkRSA |= !!(cfg->crypto.cipherSuites & OS_Tls_CIPHERSUITE_FLAGS(
+                       OS_Tls_CIPHERSUITE_ECDHE_RSA_WITH_AES_128_GCM_SHA256));
+    // OS_Tls_CIPHERSUITE_DHE_RSA_WITH_AES_128_GCM_SHA256
+    checkRSA |= !!(cfg->crypto.cipherSuites & OS_Tls_CIPHERSUITE_FLAGS(
+                       OS_Tls_CIPHERSUITE_DHE_RSA_WITH_AES_128_GCM_SHA256));
+    checkDH  |= !!(cfg->crypto.cipherSuites & OS_Tls_CIPHERSUITE_FLAGS(
+                       OS_Tls_CIPHERSUITE_DHE_RSA_WITH_AES_128_GCM_SHA256));
+
+    // Check against known size limitations of Crypto API
     if (checkRSA && ((policy->rsaMinBits > (OS_CryptoKey_SIZE_RSA_MAX * 8)) ||
                      (policy->rsaMinBits < (OS_CryptoKey_SIZE_RSA_MIN * 8))))
     {
         return false;
     }
+
     if (checkDH && ((policy->dhMinBits > (OS_CryptoKey_SIZE_DH_MAX * 8)) ||
                     (policy->dhMinBits < (OS_CryptoKey_SIZE_DH_MIN * 8))))
     {
         return false;
     }
+
     return true;
 }
 
-static OS_Error_t
-validatePolicy(
-    const TlsLib_Config_t* cfg,
-    const OS_Tls_Policy_t* policy)
-{
-    if (policy->sessionDigestsLen < 0
-        || policy->sessionDigestsLen > OS_Tls_MAX_DIGESTS ||
-        policy->signatureDigestsLen < 0
-        || policy->signatureDigestsLen > OS_Tls_MAX_DIGESTS )
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
-
-    if (!isPolicySessionAndSignatureDigestsOk(policy) ||
-        !isPolicyManagedByCryptoLib(cfg, policy))
-    {
-        return OS_ERROR_NOT_SUPPORTED;
-    }
-
-    return OS_SUCCESS;
-}
-
 static void
-setCertProfile(
-    const OS_Tls_Policy_t*      policy,
-    const OS_Tls_CipherSuite_t* suites,
-    const size_t                suitesLen,
-    mbedtls_x509_crt_profile*   profile)
+setMbedTlsCertProfile(
+    const TlsLib_t*           self,
+    mbedtls_x509_crt_profile* profile)
 {
     size_t i;
+    static const int pks[__OS_Tls_CIPHERSUITE_MAX] =
+    {
+        [OS_Tls_CIPHERSUITE_DHE_RSA_WITH_AES_128_GCM_SHA256] =
+        MBEDTLS_PK_RSA,
+        [OS_Tls_CIPHERSUITE_ECDHE_RSA_WITH_AES_128_GCM_SHA256] =
+        MBEDTLS_PK_RSA,
+    };
+    static const int digests[__OS_Tls_DIGEST_MAX] =
+    {
+        [OS_Tls_DIGEST_SHA256] = MBEDTLS_MD_SHA256
+    };
 
     memset(profile, 0, sizeof(mbedtls_x509_crt_profile));
 
-    for (i = 0; i < suitesLen; i++)
+    for (i = 0; i < __OS_Tls_CIPHERSUITE_MAX; i++)
     {
-        switch (suites[i])
+        if (self->cfg.crypto.cipherSuites & OS_Tls_CIPHERSUITE_FLAGS(i))
         {
-        case OS_Tls_CIPHERSUITE_ECDHE_RSA_WITH_AES_128_GCM_SHA256:
-        case OS_Tls_CIPHERSUITE_DHE_RSA_WITH_AES_128_GCM_SHA256:
-            profile->allowed_pks |= MBEDTLS_X509_ID_FLAG(MBEDTLS_PK_RSA);
-            break;
-        default:
-            Debug_LOG_ERROR("Ciphersuite 0x%04x is not supported", suites[i]);
+            profile->allowed_pks |= MBEDTLS_X509_ID_FLAG(pks[i]);
+        }
+    }
+    for (i = 0; i < __OS_Tls_DIGEST_MAX; i++)
+    {
+        if (self->policy.signatureDigests & OS_Tls_DIGEST_FLAGS(i))
+        {
+            profile->allowed_mds |= MBEDTLS_X509_ID_FLAG(digests[i]);
         }
     }
 
-    for (i = 0; i < policy->signatureDigestsLen; i++)
+    profile->rsa_min_bitlen = self->policy.rsaMinBits;
+}
+
+static void
+setMbedTlsCipherSuites(
+    const TlsLib_t* self,
+    int*            cipherSuites)
+{
+    size_t i, num;
+    static const int suites[__OS_Tls_CIPHERSUITE_MAX] =
     {
-        switch (policy->signatureDigests[i])
+        [OS_Tls_CIPHERSUITE_DHE_RSA_WITH_AES_128_GCM_SHA256] =
+        MBEDTLS_TLS_DHE_RSA_WITH_AES_128_GCM_SHA256,
+        [OS_Tls_CIPHERSUITE_ECDHE_RSA_WITH_AES_128_GCM_SHA256] =
+        MBEDTLS_TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+    };
+
+    num = 0;
+    for (i = 0; i < __OS_Tls_CIPHERSUITE_MAX; i++)
+    {
+        if (self->cfg.crypto.cipherSuites & OS_Tls_CIPHERSUITE_FLAGS(i))
         {
-        case OS_Tls_DIGEST_SHA256:
-            profile->allowed_mds |= MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA256 );
-            break;
-        default:
-            Debug_LOG_ERROR("Signature digest 0x%02x is not supported",
-                            policy->signatureDigests[i]);
+            cipherSuites[num++] = suites[i];
         }
     }
 
-    profile->rsa_min_bitlen = policy->rsaMinBits;
+    // mbedTLSs: 0-terminated list of allowed ciphersuites.
+    cipherSuites[num++] = 0;
+}
+
+static void
+setMbedTlsSigHashes(
+    const TlsLib_t* self,
+    int*            sigHashes)
+{
+    size_t num, i;
+    static const int digests[__OS_Tls_DIGEST_MAX] =
+    {
+        [OS_Tls_DIGEST_SHA256] = MBEDTLS_MD_SHA256
+    };
+
+    num = 0;
+    for (i = 0; i < __OS_Tls_DIGEST_MAX; i++)
+    {
+        if (self->policy.sessionDigests & OS_Tls_DIGEST_FLAGS(i))
+        {
+            sigHashes[num++] = digests[i];
+        }
+    }
+
+    // mbedTls: list of allowed signature hashes, terminated by MBEDTLS_MD_NONE.
+    sigHashes[num] = MBEDTLS_MD_NONE;
 }
 
 static OS_Error_t
@@ -316,18 +294,19 @@ initImpl(
         goto err0;
     }
 
+    // Copy external data structures to formats mbedTLS can use
+    setMbedTlsCipherSuites(self, self->mbedtls.cipherSuites);
+    setMbedTlsSigHashes(self, self->mbedtls.sigHashes);
+    setMbedTlsCertProfile(self, &self->mbedtls.certProfile);
+
     // Which ciphersuites are allowed? This heavily depends on the state of the
     // modified mbedTLS and cannot simply be changed!!
-    mbedtls_ssl_conf_ciphersuites(&self->mbedtls.conf,
-                                  (int*) self->cfg.crypto.cipherSuites);
+    mbedtls_ssl_conf_ciphersuites(&self->mbedtls.conf, self->mbedtls.cipherSuites);
 
     // Which hashes do we allow for server signatures?
-    mbedtls_ssl_conf_sig_hashes(&self->mbedtls.conf,
-                                (int*) self->policy.signatureDigests);
+    mbedtls_ssl_conf_sig_hashes(&self->mbedtls.conf, self->mbedtls.sigHashes);
 
     // Which certs do we accept (hashes, rsa bitlen)
-    setCertProfile(&self->policy, self->cfg.crypto.cipherSuites,
-                   self->cfg.crypto.cipherSuitesLen, &self->mbedtls.certProfile);
     mbedtls_ssl_conf_cert_profile(&self->mbedtls.conf, &self->mbedtls.certProfile);
 
     // What is the minimum bitlen we allow for DH-based key exchanges?
@@ -564,7 +543,7 @@ resetImpl(
 }
 
 static inline bool
-isInitParametersOk(
+checkParams(
     TlsLib_t**             self,
     const TlsLib_Config_t* cfg)
 {
@@ -593,6 +572,12 @@ isInitParametersOk(
         return false;
     }
 
+    if (!cfg->crypto.cipherSuites)
+    {
+        Debug_LOG_ERROR("No ciphersuite is selected");
+        return false;
+    }
+
     return true;
 }
 
@@ -607,16 +592,9 @@ TlsLib_init(
     OS_Error_t err;
     TlsLib_t* lib;
 
-    if (!isInitParametersOk(self, cfg))
+    if (!checkParams(self, cfg))
     {
         return OS_ERROR_INVALID_PARAMETER;
-    }
-
-    if ((err = checkSuites(cfg->crypto.cipherSuites,
-                           cfg->crypto.cipherSuitesLen)) != OS_SUCCESS)
-    {
-        Debug_LOG_ERROR("Invalid selection of ciphersuites or too many ciphersuites given");
-        return err;
     }
 
     if ((lib = malloc(sizeof(TlsLib_t))) == NULL)
@@ -624,7 +602,6 @@ TlsLib_init(
         return OS_ERROR_INSUFFICIENT_SPACE;
     }
 
-    *self = lib;
     memset(lib, 0, sizeof(TlsLib_t));
     memcpy(&lib->cfg, cfg, sizeof(TlsLib_Config_t));
 
@@ -633,27 +610,20 @@ TlsLib_init(
         // If no policy is given, derive all the policy parameters based on the
         // WEAKEST ciphersuite given by the user.
         derivePolicy(&lib->cfg, &lib->policy);
-        Debug_LOG_INFO("Derived policy with %zu/%zu digests and rsaMinBits=%zu, dhMinBits=%zu",
-                       lib->policy.sessionDigestsLen, lib->policy.signatureDigestsLen,
-                       lib->policy.rsaMinBits, lib->policy.dhMinBits);
     }
     else
     {
         lib->policy = *cfg->crypto.policy;
     }
 
-    if ((err = validatePolicy(&lib->cfg, &lib->policy)) == OS_SUCCESS)
-    {
-        // These two need to be zero-terminated so they can be passed to mbedTLS!
-        lib->cfg.crypto.cipherSuites[lib->cfg.crypto.cipherSuitesLen] = 0;
-        lib->policy.signatureDigests[lib->policy.signatureDigestsLen] = 0;
-        err = initImpl(lib);
-    }
-
+    err = !checkPolicy(&lib->cfg, &lib->policy) ?
+          OS_ERROR_INVALID_PARAMETER : initImpl(lib);
     if (OS_SUCCESS != err)
     {
         free(lib);
     }
+
+    *self = lib;
 
     return err;
 }
