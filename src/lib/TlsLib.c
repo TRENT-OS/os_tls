@@ -448,6 +448,7 @@ handshakeImpl(
             continue;
         case OS_ERROR_CONNECTION_CLOSED:
             Debug_LOG_ERROR("connection closed during mbedtls_ssl_handshake()");
+            self->open = false;
             return OS_ERROR_CONNECTION_CLOSED;
         default:
             Debug_LOG_ERROR("mbedtls_ssl_handshake() failed with 0x%04x", rc);
@@ -493,6 +494,7 @@ writeImpl(
                 continue;
             case OS_ERROR_CONNECTION_CLOSED:
                 Debug_LOG_ERROR("connection closed during mbedtls_ssl_write()");
+                self->open = false;
                 return OS_ERROR_CONNECTION_CLOSED;
             default:
                 Debug_LOG_ERROR("mbedtls_ssl_write() failed with 0x%04x", rc);
@@ -550,6 +552,7 @@ readImpl(
                 continue;
             case OS_ERROR_CONNECTION_CLOSED:
                 Debug_LOG_ERROR("connection closed during mbedtls_ssl_read()");
+                self->open = false;
                 return OS_ERROR_CONNECTION_CLOSED;
             default:
                 Debug_LOG_ERROR("mbedtls_ssl_read() failed with 0x%04x", rc);
