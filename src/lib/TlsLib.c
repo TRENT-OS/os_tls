@@ -252,7 +252,7 @@ setMbedTlsCipherSuites(
     }
 
     // mbedTLSs: 0-terminated list of allowed ciphersuites.
-    cipherSuites[num++] = 0;
+    cipherSuites[num] = 0;
 }
 
 static void
