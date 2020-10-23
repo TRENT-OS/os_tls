@@ -698,7 +698,7 @@ TlsLib_handshake(
     {
         return OS_ERROR_INVALID_PARAMETER;
     }
-    else if (self->open)
+    if (self->open)
     {
         return OS_ERROR_OPERATION_DENIED;
     }
@@ -719,7 +719,7 @@ TlsLib_write(
     {
         return OS_ERROR_INVALID_PARAMETER;
     }
-    else if (!self->open)
+    if (!self->open)
     {
         return OS_ERROR_OPERATION_DENIED;
     }
@@ -737,7 +737,7 @@ TlsLib_read(
     {
         return OS_ERROR_INVALID_PARAMETER;
     }
-    else if (!self->open)
+    if (!self->open)
     {
         return OS_ERROR_OPERATION_DENIED;
     }
