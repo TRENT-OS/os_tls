@@ -323,7 +323,7 @@ initImpl(
                                           MBEDTLS_SSL_TRANSPORT_STREAM,
                                           MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
     {
-        Debug_LOG_ERROR("mbedtls_ssl_config_defaults() failed with 0x%04x", rc);
+        DEBUG_LOG_ERROR_MBEDTLS("mbedtls_ssl_config_defaults", rc);
         goto err0;
     }
 
@@ -373,7 +373,7 @@ initImpl(
         if ((rc = mbedtls_x509_crt_parse(&self->mbedtls.cert, self->mbedtls.caCerts,
                                          self->mbedtls.caCertLen)) != 0)
         {
-            Debug_LOG_ERROR("mbedtls_x509_crt_parse() failed with 0x%04x", rc);
+            DEBUG_LOG_ERROR_MBEDTLS("mbedtls_x509_crt_parse", rc);
             goto err1;
         }
         mbedtls_ssl_conf_ca_chain(&self->mbedtls.conf, &self->mbedtls.cert, NULL);
@@ -397,7 +397,7 @@ initImpl(
 
     if ((rc = mbedtls_ssl_setup(&self->mbedtls.ssl, &self->mbedtls.conf)) != 0)
     {
-        Debug_LOG_ERROR("mbedtls_ssl_setup() failed with 0x%04x", rc);
+        DEBUG_LOG_ERROR_MBEDTLS("mbedtls_ssl_setup", rc);
         goto err2;
     }
 
@@ -459,7 +459,7 @@ handshakeImpl(
             self->open = false;
             return OS_ERROR_CONNECTION_CLOSED;
         default:
-            Debug_LOG_ERROR("mbedtls_ssl_handshake() failed with 0x%04x", rc);
+            DEBUG_LOG_ERROR_MBEDTLS("mbedtls_ssl_handshake", rc);
             return OS_ERROR_ABORTED;
         }
     }
@@ -505,7 +505,7 @@ writeImpl(
                 self->open = false;
                 return OS_ERROR_CONNECTION_CLOSED;
             default:
-                Debug_LOG_ERROR("mbedtls_ssl_write() failed with 0x%04x", rc);
+                DEBUG_LOG_ERROR_MBEDTLS("mbedtls_ssl_write", rc);
                 return OS_ERROR_ABORTED;
             }
         }
@@ -563,7 +563,7 @@ readImpl(
                 self->open = false;
                 return OS_ERROR_CONNECTION_CLOSED;
             default:
-                Debug_LOG_ERROR("mbedtls_ssl_read() failed with 0x%04x", rc);
+                DEBUG_LOG_ERROR_MBEDTLS("mbedtls_ssl_read", rc);
                 return OS_ERROR_ABORTED;
             }
         }
