@@ -581,8 +581,15 @@ static OS_Error_t
 resetImpl(
     TlsLib_t* self)
 {
-    return (mbedtls_ssl_session_reset(&self->mbedtls.ssl) == 0) ?
-           OS_SUCCESS : OS_ERROR_ABORTED;
+    int rc;
+
+    if ((rc  = mbedtls_ssl_session_reset(&self->mbedtls.ssl)) != 0)
+    {
+        DEBUG_LOG_ERROR_MBEDTLS("mbedtls_ssl_session_reset", rc);
+        return OS_ERROR_ABORTED;
+    }
+
+    return OS_SUCCESS;
 }
 
 static inline bool
