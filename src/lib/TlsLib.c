@@ -7,6 +7,7 @@
 #include "lib/TlsLib.h"
 
 #include "mbedtls/debug.h"
+#include "mbedtls/error.h"
 #include "LibDebug/Debug.h"
 
 #include <stdio.h>
@@ -32,6 +33,13 @@ struct TlsLib
 };
 
 #define MIN_BITS_UNLIMITED ((size_t) -1)
+
+// Macro to translate mbedTLS errors into readable strings
+#define DEBUG_LOG_ERROR_MBEDTLS(_fn_, _ret_) do { \
+    char msg[256] = {0}; \
+    mbedtls_strerror(_ret_, msg, sizeof(msg)); \
+    Debug_LOG_ERROR("%s() failed with '%s' (rc=%i)", _fn_, msg, _ret_); \
+} while(0)
 
 // Private static functions ----------------------------------------------------
 
