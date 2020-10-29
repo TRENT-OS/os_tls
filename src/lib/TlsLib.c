@@ -260,6 +260,7 @@ setMbedTlsCipherSuites(
     }
 
     // mbedTLSs: 0-terminated list of allowed ciphersuites.
+    Debug_ASSERT(num < sizeof(cipherSuites));
     cipherSuites[num] = 0;
 }
 
@@ -284,6 +285,7 @@ setMbedTlsSigHashes(
     }
 
     // mbedTls: list of allowed signature hashes, terminated by MBEDTLS_MD_NONE.
+    Debug_ASSERT(num < sizeof(sigHashes));
     sigHashes[num] = MBEDTLS_MD_NONE;
 }
 
