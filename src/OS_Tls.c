@@ -54,6 +54,7 @@ OS_Tls_init(
         }
         break;
     default:
+        Debug_LOG_ERROR("Mode is invalid");
         err = OS_ERROR_INVALID_PARAMETER;
         goto err0;
     }
@@ -85,6 +86,7 @@ OS_Tls_free(
         err = TlsLibClient_free(self->client);
         break;
     default:
+        Debug_LOG_FATAL("TLS instance is configured in unknown mode!");
         return OS_ERROR_GENERIC;
     }
 
@@ -106,6 +108,7 @@ OS_Tls_handshake(
     case OS_Tls_MODE_CLIENT:
         return TlsLibClient_handshake(self->client);
     default:
+        Debug_LOG_FATAL("TLS instance is configured in unknown mode!");
         return OS_ERROR_GENERIC;
     }
 }
@@ -125,6 +128,7 @@ OS_Tls_write(
     case OS_Tls_MODE_CLIENT:
         return TlsLibClient_write(self->client, data, dataSize);
     default:
+        Debug_LOG_FATAL("TLS instance is configured in unknown mode!");
         return OS_ERROR_GENERIC;
     }
 }
@@ -144,6 +148,7 @@ OS_Tls_read(
     case OS_Tls_MODE_CLIENT:
         return TlsLibClient_read(self->client, data, dataSize);
     default:
+        Debug_LOG_FATAL("TLS instance is configured in unknown mode!");
         return OS_ERROR_GENERIC;
     }
 }
@@ -161,6 +166,7 @@ OS_Tls_reset(
     case OS_Tls_MODE_CLIENT:
         return TlsLibClient_reset(self->client);
     default:
+        Debug_LOG_FATAL("TLS instance is configured in unknown mode!");
         return OS_ERROR_GENERIC;
     }
 }
