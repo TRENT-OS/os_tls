@@ -54,7 +54,7 @@ OS_Tls_init(
         }
         break;
     default:
-        err = OS_ERROR_NOT_SUPPORTED;
+        err = OS_ERROR_INVALID_PARAMETER;
         goto err0;
     }
 
@@ -85,7 +85,7 @@ OS_Tls_free(
         err = TlsLibClient_free(self->client);
         break;
     default:
-        err = OS_ERROR_NOT_SUPPORTED;
+        return OS_ERROR_GENERIC;
     }
 
     free(self);
@@ -106,10 +106,8 @@ OS_Tls_handshake(
     case OS_Tls_MODE_CLIENT:
         return TlsLibClient_handshake(self->client);
     default:
-        return OS_ERROR_NOT_SUPPORTED;
+        return OS_ERROR_GENERIC;
     }
-
-    return OS_ERROR_GENERIC;
 }
 
 OS_Error_t
@@ -127,10 +125,8 @@ OS_Tls_write(
     case OS_Tls_MODE_CLIENT:
         return TlsLibClient_write(self->client, data, dataSize);
     default:
-        return OS_ERROR_NOT_SUPPORTED;
+        return OS_ERROR_GENERIC;
     }
-
-    return OS_ERROR_GENERIC;
 }
 
 OS_Error_t
@@ -148,10 +144,8 @@ OS_Tls_read(
     case OS_Tls_MODE_CLIENT:
         return TlsLibClient_read(self->client, data, dataSize);
     default:
-        return OS_ERROR_NOT_SUPPORTED;
+        return OS_ERROR_GENERIC;
     }
-
-    return OS_ERROR_GENERIC;
 }
 
 OS_Error_t
@@ -167,10 +161,8 @@ OS_Tls_reset(
     case OS_Tls_MODE_CLIENT:
         return TlsLibClient_reset(self->client);
     default:
-        return OS_ERROR_NOT_SUPPORTED;
+        return OS_ERROR_GENERIC;
     }
-
-    return OS_ERROR_GENERIC;
 }
 
 OS_Tls_Mode_t
