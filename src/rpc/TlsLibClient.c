@@ -4,6 +4,8 @@
 
 #include "rpc/TlsLibClient.h"
 
+#include "LibMacros/Check.h"
+
 #include <string.h>
 #include <stdlib.h>
 
@@ -23,10 +25,9 @@ TlsLibClient_init(
 {
     TlsLibClient_t* cli;
 
-    if (NULL == self || NULL == rpc || OS_Dataport_isUnset(rpc->dataport))
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_PTR_NOT_NULL(self);
+    CHECK_PTR_NOT_NULL(rpc);
+    CHECK_DATAPORT_SET(rpc->dataport);
 
     if ((cli = malloc(sizeof(TlsLibClient_t))) == NULL)
     {
@@ -45,10 +46,7 @@ OS_Error_t
 TlsLibClient_free(
     TlsLibClient_t* self)
 {
-    if (NULL == self)
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_PTR_NOT_NULL(self);
 
     free(self);
 
@@ -61,10 +59,7 @@ OS_Error_t
 TlsLibClient_handshake(
     TlsLibClient_t* self)
 {
-    if (NULL == self)
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_PTR_NOT_NULL(self);
 
     return self->rpc.handshake();
 }
@@ -75,14 +70,11 @@ TlsLibClient_write(
     const void*     data,
     size_t*         dataSize)
 {
-    if (NULL == self || NULL == data || NULL == dataSize)
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
-    if (*dataSize > OS_Dataport_getSize(self->rpc.dataport))
-    {
-        return OS_ERROR_INSUFFICIENT_SPACE;
-    }
+    CHECK_PTR_NOT_NULL(self);
+    CHECK_PTR_NOT_NULL(data);
+    CHECK_PTR_NOT_NULL(dataSize);
+
+    CHECK_DATAPORT_SIZE(self->rpc.dataport, *dataSize);
 
     memcpy(OS_Dataport_getBuf(self->rpc.dataport), data, *dataSize);
 
@@ -97,10 +89,9 @@ TlsLibClient_read(
 {
     OS_Error_t rc;
 
-    if (NULL == self || NULL == data || NULL == dataSize)
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_PTR_NOT_NULL(self);
+    CHECK_PTR_NOT_NULL(data);
+    CHECK_PTR_NOT_NULL(dataSize);
 
     if ((rc = self->rpc.read(dataSize)) == OS_SUCCESS)
     {
@@ -121,10 +112,7 @@ OS_Error_t
 TlsLibClient_reset(
     TlsLibClient_t* self)
 {
-    if (NULL == self)
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_PTR_NOT_NULL(self);
 
     return self->rpc.reset();
 }

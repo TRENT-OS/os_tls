@@ -7,6 +7,8 @@
 #include "lib/TlsLib.h"
 #include "rpc/TlsLibClient.h"
 
+#include "LibMacros/Check.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,10 +28,8 @@ OS_Tls_init(
     OS_Error_t err;
     OS_Tls_t* api;
 
-    if (NULL == self || NULL == cfg)
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_PTR_NOT_NULL(self);
+    CHECK_PTR_NOT_NULL(cfg);
 
     if ((api = malloc(sizeof(OS_Tls_t))) == NULL)
     {
@@ -74,10 +74,7 @@ OS_Tls_free(
 {
     OS_Error_t err;
 
-    if (NULL == self)
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_PTR_NOT_NULL(self);
 
     switch (self->mode)
     {
@@ -100,10 +97,7 @@ OS_Error_t
 OS_Tls_handshake(
     OS_Tls_Handle_t self)
 {
-    if (NULL == self)
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_PTR_NOT_NULL(self);
 
     switch (self->mode)
     {
@@ -124,10 +118,7 @@ OS_Tls_write(
     const void*     data,
     size_t*         dataSize)
 {
-    if (NULL == self)
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_PTR_NOT_NULL(self);
 
     switch (self->mode)
     {
@@ -148,10 +139,7 @@ OS_Tls_read(
     void*           data,
     size_t*         dataSize)
 {
-    if (NULL == self)
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_PTR_NOT_NULL(self);
 
     switch (self->mode)
     {
@@ -170,10 +158,7 @@ OS_Error_t
 OS_Tls_reset(
     OS_Tls_Handle_t self)
 {
-    if (NULL == self)
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_PTR_NOT_NULL(self);
 
     switch (self->mode)
     {

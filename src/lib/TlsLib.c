@@ -9,6 +9,7 @@
 #include "mbedtls/debug.h"
 #include "mbedtls/error.h"
 #include "LibDebug/Debug.h"
+#include "LibMacros/Check.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -159,7 +160,7 @@ derivePolicy(
     }
 }
 
-static bool
+static OS_Error_t
 checkPolicy(
     const TlsLib_Config_t* cfg,
     const OS_Tls_Policy_t* policy)
@@ -168,10 +169,8 @@ checkPolicy(
     bool checkRSA = false;
 
     // Digest flags cannot be unset
-    if (!policy->handshakeDigests || !policy->certDigests)
-    {
-        return false;
-    }
+    CHECK_FLAGS_NOT_ZERO(policy->handshakeDigests);
+    CHECK_FLAGS_NOT_ZERO(policy->certDigests);
 
     // OS_Tls_CIPHERSUITE_ECDHE_RSA_WITH_AES_128_GCM_SHA256
     checkRSA |= !!(cfg->crypto.cipherSuites & OS_Tls_CIPHERSUITE_FLAGS(
@@ -183,19 +182,20 @@ checkPolicy(
                        OS_Tls_CIPHERSUITE_DHE_RSA_WITH_AES_128_GCM_SHA256));
 
     // Check against known size limitations of Crypto API
-    if (checkRSA && ((policy->rsaMinBits > (OS_CryptoKey_SIZE_RSA_MAX * 8)) ||
-                     (policy->rsaMinBits < (OS_CryptoKey_SIZE_RSA_MIN * 8))))
+    if (checkRSA)
     {
-        return false;
+        CHECK_VALUE_IN_RANGE(policy->rsaMinBits,
+                             (OS_CryptoKey_SIZE_RSA_MIN * 8),
+                             (OS_CryptoKey_SIZE_RSA_MAX * 8) + 1);
+    }
+    if (checkDH)
+    {
+        CHECK_VALUE_IN_RANGE(policy->dhMinBits,
+                             (OS_CryptoKey_SIZE_DH_MIN * 8),
+                             (OS_CryptoKey_SIZE_DH_MAX * 8) + 1);
     }
 
-    if (checkDH && ((policy->dhMinBits > (OS_CryptoKey_SIZE_DH_MAX * 8)) ||
-                    (policy->dhMinBits < (OS_CryptoKey_SIZE_DH_MIN * 8))))
-    {
-        return false;
-    }
-
-    return true;
+    return OS_SUCCESS;
 }
 
 static void
@@ -594,51 +594,33 @@ resetImpl(
     return OS_SUCCESS;
 }
 
-static inline bool
+static OS_Error_t
 checkParams(
     TlsLib_t**             self,
     const TlsLib_Config_t* cfg)
 {
-    if (NULL == self || NULL == cfg)
-    {
-        return false;
-    }
+    CHECK_PTR_NOT_NULL(self);
+    CHECK_PTR_NOT_NULL(cfg);
+    CHECK_PTR_NOT_NULL(cfg->crypto.handle);
+    CHECK_PTR_NOT_NULL(cfg->socket.recv);
+    CHECK_PTR_NOT_NULL(cfg->socket.send);
 
-    if (NULL == cfg->crypto.handle)
-    {
-        Debug_LOG_ERROR("Crypto context is NULL");
-        return false;
-    }
-
-    if (NULL == cfg->socket.recv || NULL == cfg->socket.send)
-    {
-        Debug_LOG_ERROR("Socket callbacks for send/recv are not set");
-        return false;
-    }
+    CHECK_FLAGS_NOT_ZERO(cfg->crypto.cipherSuites);
 
     if (!(cfg->flags & OS_Tls_FLAG_NO_VERIFY))
     {
-        if (NULL == cfg->crypto.caCerts || strlen(cfg->crypto.caCerts) == 0)
-        {
-            Debug_LOG_ERROR("No CA cert(s) given");
-            return false;
-        }
+        CHECK_PTR_NOT_NULL(cfg->crypto.caCerts);
+        CHECK_STR_NOT_EMPTY(cfg->crypto.caCerts);
         if ( (strstr(cfg->crypto.caCerts, "-----BEGIN CERTIFICATE-----") == NULL ||
               strstr(cfg->crypto.caCerts, "-----END CERTIFICATE-----") == NULL) )
         {
             Debug_LOG_ERROR("Presented CA cert(s) does not have BEGIN/END "
                             "(maybe it is not PEM encoded?)");
-            return false;
+            return OS_ERROR_INVALID_PARAMETER;
         }
     }
 
-    if (!cfg->crypto.cipherSuites)
-    {
-        Debug_LOG_ERROR("No ciphersuite is selected");
-        return false;
-    }
-
-    return true;
+    return OS_SUCCESS;
 }
 
 
@@ -652,9 +634,9 @@ TlsLib_init(
     OS_Error_t err;
     TlsLib_t* lib;
 
-    if (!checkParams(self, cfg))
+    if ((err = checkParams(self, cfg)) != OS_SUCCESS)
     {
-        return OS_ERROR_INVALID_PARAMETER;
+        return err;
     }
 
     if ((lib = malloc(sizeof(TlsLib_t))) == NULL)
@@ -676,9 +658,12 @@ TlsLib_init(
         lib->policy = *cfg->crypto.policy;
     }
 
-    err = !checkPolicy(&lib->cfg, &lib->policy) ?
-          OS_ERROR_INVALID_PARAMETER : initImpl(lib);
-    if (OS_SUCCESS != err)
+    if ((err = checkPolicy(&lib->cfg, &lib->policy)) == OS_SUCCESS)
+    {
+        err = initImpl(lib);
+    }
+
+    if (err != OS_SUCCESS)
     {
         free(lib);
     }
@@ -694,10 +679,7 @@ TlsLib_free(
 {
     OS_Error_t err;
 
-    if (NULL == self)
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_PTR_NOT_NULL(self);
 
     err = freeImpl(self);
     free(self);
@@ -711,12 +693,11 @@ TlsLib_handshake(
 {
     OS_Error_t err;
 
-    if (NULL == self)
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_PTR_NOT_NULL(self);
+
     if (self->open)
     {
+        Debug_LOG_ERROR("The TLS session is already open");
         return OS_ERROR_OPERATION_DENIED;
     }
 
@@ -732,12 +713,14 @@ TlsLib_write(
     const void* data,
     size_t*     dataSize)
 {
-    if (NULL == self || NULL == data || NULL == dataSize || 0 == *dataSize)
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_PTR_NOT_NULL(self);
+    CHECK_PTR_NOT_NULL(data);
+    CHECK_PTR_NOT_NULL(dataSize);
+    CHECK_VALUE_NOT_ZERO(*dataSize);
+
     if (!self->open)
     {
+        Debug_LOG_ERROR("The TLS session is not open yet");
         return OS_ERROR_OPERATION_DENIED;
     }
 
@@ -750,12 +733,14 @@ TlsLib_read(
     void*     data,
     size_t*   dataSize)
 {
-    if (NULL == self || NULL == data || NULL == dataSize || 0 == *dataSize)
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_PTR_NOT_NULL(self);
+    CHECK_PTR_NOT_NULL(data);
+    CHECK_PTR_NOT_NULL(dataSize);
+    CHECK_VALUE_NOT_ZERO(*dataSize);
+
     if (!self->open)
     {
+        Debug_LOG_ERROR("The TLS session is not open yet");
         return OS_ERROR_OPERATION_DENIED;
     }
 
@@ -766,10 +751,7 @@ OS_Error_t
 TlsLib_reset(
     TlsLib_t* self)
 {
-    if (NULL == self)
-    {
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_PTR_NOT_NULL(self);
 
     // Regardless of the success of resetImpl() we set the connection to closed,
     // because most likely a big part of the internal data structures will be
