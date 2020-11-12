@@ -551,7 +551,7 @@ readImpl(
                 // count this as success but terminate the SSL session here.
                 Debug_LOG_INFO("host has signaled that connection will be closed");
                 self->open = false;
-                return OS_SUCCESS;
+                return OS_ERROR_CONNECTION_CLOSED;
             case MBEDTLS_ERR_SSL_WANT_READ:
                 // There were no bytes to read without blocking
                 Debug_LOG_INFO("mbedtls_ssl_read() would block");
