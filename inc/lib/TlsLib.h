@@ -6,7 +6,7 @@
 
 #include "OS_Tls.h"
 
-#include "LibDebug/Debug.h"
+#include "lib_debug/Debug.h"
 
 #include "mbedtls/ssl.h"
 #include "mbedtls/ssl_ciphersuites.h"

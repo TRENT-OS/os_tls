@@ -8,8 +8,10 @@
 
 #include "mbedtls/debug.h"
 #include "mbedtls/error.h"
-#include "LibDebug/Debug.h"
-#include "LibMacros/Check.h"
+#include "lib_debug/Debug.h"
+#include "lib_macros/Check.h"
+
+#include "lib_compiler/compiler.h"
 
 #include <stdio.h>
 #include <stdlib.h>
