@@ -4,12 +4,8 @@
 
 #pragma once
 
+#include "TlsLib.impl.h"
 #include "OS_Tls.h"
-
-#include "LibDebug/Debug.h"
-
-#include "mbedtls/ssl.h"
-#include "mbedtls/ssl_ciphersuites.h"
 
 typedef struct TlsLib TlsLib_t;
 

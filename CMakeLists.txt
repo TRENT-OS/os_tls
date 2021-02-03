@@ -31,6 +31,7 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
     INTERFACE
         3rdparty_mbedtls_for_tls
+        3rdparty_pbtls_for_tls
         os_core_api
         lib_macros
         lib_debug

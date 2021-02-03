@@ -15,23 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct TlsLib
-{
-    bool open;
-    struct mbedtls
-    {
-        mbedtls_ssl_context ssl;
-        mbedtls_ssl_config conf;
-        mbedtls_x509_crt cert;
-        mbedtls_x509_crt_profile certProfile;
-        int cipherSuites[__OS_Tls_CIPHERSUITE_MAX];
-        int sigHashes[__OS_Tls_DIGEST_MAX];
-        unsigned char* caCerts;
-        size_t caCertLen;
-    } mbedtls;
-    TlsLib_Config_t cfg;
-    OS_Tls_Policy_t policy;
-};
+#include "pb_lib_wrapper.h"
 
 #define MIN_BITS_UNLIMITED ((size_t) -1)
 
@@ -43,7 +27,7 @@ struct TlsLib
 } while(0)
 
 // Private static functions ----------------------------------------------------
-
+#if MBEDTLS_AKTIVE
 // this is called by mbedTLS to log messages
 static void
 logDebug(
@@ -111,7 +95,7 @@ getRndBytes(
     return OS_CryptoRng_getBytes(ctx, 0, (void*) buf,
                                  len) == OS_SUCCESS ? 0 : 1;
 }
-
+#endif
 static inline size_t
 getMinOf(
     size_t a,
@@ -197,7 +181,7 @@ checkPolicy(
 
     return OS_SUCCESS;
 }
-
+#if MBEDTLS_AKTIVE
 static void
 setMbedTlsCertProfile(
     const TlsLib_t*           self,
@@ -311,13 +295,13 @@ setMbedTlsCerts(
 
     return true;
 }
-
+#endif
 static OS_Error_t
 initImpl(
     TlsLib_t* self)
 {
     int rc;
-
+#if MBEDTLS_AKTIVE
     // Apply default configuration first, the override parts of it..
     mbedtls_ssl_config_init(&self->mbedtls.conf);
     if ((rc = mbedtls_ssl_config_defaults(&self->mbedtls.conf,
@@ -414,7 +398,18 @@ err1:
     }
 err0:
     mbedtls_ssl_config_free(&self->mbedtls.conf);
+#else
 
+    if ((rc = pb_crypto_pbTls_crypto_init(self)) != 0)
+    {
+        Debug_LOG_ERROR("pb_crypto_pbTls_crypto_init() with code 0x%04x", rc);
+        goto err1;
+    }
+    return OS_SUCCESS;
+
+err1:
+    pb_crypto_pbtls_ssl_free(self);
+#endif
     return OS_ERROR_ABORTED;
 }
 
@@ -422,6 +417,7 @@ static OS_Error_t
 freeImpl(
     TlsLib_t* self)
 {
+#if MBEDTLS_AKTIVE
     mbedtls_ssl_free(&self->mbedtls.ssl);
     if (!(self->cfg.flags & OS_Tls_FLAG_NO_VERIFY))
     {
@@ -429,7 +425,10 @@ freeImpl(
     }
     mbedtls_ssl_config_free(&self->mbedtls.conf);
     free(self->mbedtls.caCerts);
+#else
+    pb_crypto_pbtls_ssl_free(self);
 
+#endif
     return OS_SUCCESS;
 }
 
@@ -441,7 +440,11 @@ handshakeImpl(
 
     for (;;)
     {
+#if MBEDTLS_AKTIVE
         rc = mbedtls_ssl_handshake(&self->mbedtls.ssl);
+#else
+        rc = pb_crypto_pbTls_ssl_handshake(self);
+#endif
         switch (rc)
         {
         case 0:
@@ -481,7 +484,11 @@ writeImpl(
 
     while (to_write > 0)
     {
+#if MBEDTLS_AKTIVE
         rc = mbedtls_ssl_write(&self->mbedtls.ssl, data + offs, to_write);
+#else
+        rc = pb_crypto_pbTls_WriteAppData(self, (uint8_t*) data + offs, to_write);
+#endif
         if (rc <= 0)
         {
             switch (rc)
@@ -535,7 +542,11 @@ readImpl(
 
     while (to_read > 0)
     {
+#if MBEDTLS_AKTIVE
         rc = mbedtls_ssl_read(&self->mbedtls.ssl, data + offs, to_read);
+#else
+        rc = pb_crypto_pbTls_ReadAppData(self, data + offs, to_read);
+#endif
         if (rc <= 0)
         {
             switch (rc)
