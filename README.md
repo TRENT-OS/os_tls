@@ -7,8 +7,9 @@ connections
 
 ## Usage
 
-The project creates a library seos_tls_api. Just include CMakelists.txt in the
-cmake build.
+The project creates a CMake interface library called os_tls which can be
+statically linked by other projects that depend on it (libraries, components
+etc.).
 
 ### Dependencies
 
