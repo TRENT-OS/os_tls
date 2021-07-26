@@ -37,7 +37,7 @@ struct TlsLib
 
 #define MIN_BITS_UNLIMITED ((size_t) -1)
 
-// Macro to translate mbedTLS errors into readable strings
+// Macro to translate mbedTLS errors into readable strings.
 #define DEBUG_LOG_ERROR_MBEDTLS(_fn_, _ret_) do { \
     char msg[256] = {0}; \
     mbedtls_strerror(_ret_, msg, sizeof(msg)); \
@@ -46,7 +46,7 @@ struct TlsLib
 
 // Private static functions ----------------------------------------------------
 
-// this is called by mbedTLS to log messages
+// This function is called by mbedTLS to log messages.
 static void
 logDebug(
     void*       ctx,
@@ -77,8 +77,8 @@ logDebug(
         line,
         str);
 
-    // mbedtls attaches its own next line char. This results in extra empty
-    // lines which we don't want (because Debug_LOG_XXX adds another '\n').
+    // Replace '\n' in mbedtls string with '\0' because otherwise it would
+    // result in extra empty lines because Debug_LOG_XXX adds another '\n'.
     size_t msg_len = strlen(msg);
     if (msg_len > 0 && msg[msg_len - 1] == '\n')
     {
@@ -147,9 +147,9 @@ derivePolicy(
     policy->dhMinBits  = MIN_BITS_UNLIMITED;
     policy->rsaMinBits = MIN_BITS_UNLIMITED;
 
-    // Here we go through the ciphersuites given and derive appropriate security
-    // parameters. The result will be the based on the WEAKEST ciphersuite given
-    // by the user -- think a moment, this DOES make sense.
+    // Here we go through the given ciphersuites and derive appropriate security
+    // parameters. The result will be based on the WEAKEST ciphersuite given by
+    // the user - think a moment, this DOES make sense.
     for (size_t i = 0; i < __OS_Tls_CIPHERSUITE_MAX; i++)
     {
         if (cfg->crypto.cipherSuites & OS_Tls_CIPHERSUITE_FLAGS(i))
@@ -170,7 +170,7 @@ checkPolicy(
     bool checkDH  = false;
     bool checkRSA = false;
 
-    // Digest flags cannot be unset
+    // Digest flags should never be zero
     CHECK_FLAGS_NOT_ZERO(policy->handshakeDigests);
     CHECK_FLAGS_NOT_ZERO(policy->certDigests);
 
@@ -261,7 +261,7 @@ setMbedTlsCipherSuites(
         }
     }
 
-    // mbedTLSs: 0-terminated list of allowed ciphersuites.
+    // mbedTLSs: list of allowed ciphersuites, terminated by 0
     Debug_ASSERT(num < sizeof(cipherSuites));
     cipherSuites[num] = 0;
 }
@@ -286,7 +286,7 @@ setMbedTlsSigHashes(
         }
     }
 
-    // mbedTls: list of allowed signature hashes, terminated by MBEDTLS_MD_NONE.
+    // mbedTls: list of allowed signature hashes, terminated by MBEDTLS_MD_NONE
     Debug_ASSERT(num < sizeof(sigHashes));
     sigHashes[num] = MBEDTLS_MD_NONE;
 }
@@ -320,7 +320,7 @@ initImpl(
 {
     int rc;
 
-    // Apply default configuration first, the override parts of it..
+    // Apply default configuration first, then override parts of it
     mbedtls_ssl_config_init(&self->mbedtls.conf);
     if ((rc = mbedtls_ssl_config_defaults(&self->mbedtls.conf,
                                           MBEDTLS_SSL_IS_CLIENT,
@@ -344,13 +344,13 @@ initImpl(
     }
 
     // Which ciphersuites are allowed? This heavily depends on the state of the
-    // modified mbedTLS and cannot simply be changed!!
+    // modified mbedTLS and cannot simply be changed!
     mbedtls_ssl_conf_ciphersuites(&self->mbedtls.conf, self->mbedtls.cipherSuites);
 
     // Which hashes do we allow for server signatures?
     mbedtls_ssl_conf_sig_hashes(&self->mbedtls.conf, self->mbedtls.sigHashes);
 
-    // Which certs do we accept (hashes, rsa bitlen)
+    // Which certs do we accept (hashes, rsa bitlen)?
     mbedtls_ssl_conf_cert_profile(&self->mbedtls.conf, &self->mbedtls.certProfile);
 
     // What is the minimum bitlen we allow for DH-based key exchanges?
@@ -366,8 +366,8 @@ initImpl(
 
     if (self->cfg.flags & OS_Tls_FLAG_NO_VERIFY)
     {
-        // We need to have the option to disable cert verification, even though it
-        // is not advisable
+        // We need to have the option to disable cert verification, even though
+        // it is not advisable.
         Debug_LOG_INFO("TLS certificate verification is disabled, this is NOT secure!");
         mbedtls_ssl_conf_authmode(&self->mbedtls.conf, MBEDTLS_SSL_VERIFY_NONE);
     }
@@ -384,14 +384,14 @@ initImpl(
         mbedtls_ssl_conf_authmode(&self->mbedtls.conf, MBEDTLS_SSL_VERIFY_REQUIRED);
     }
 
-    // Output levels: (0) none, (1) error, (2) + state change, (3) + informational
+    // Output levels: (0) none, (1) error, (2) state change, (3) informational
     mbedtls_debug_set_threshold((self->cfg.flags & OS_Tls_FLAG_DEBUG) ? 3 : 0);
 
     mbedtls_ssl_init(&self->mbedtls.ssl);
 
-    // Attention: This has to happen before mbedtls_ssl_setup() is called, as
-    // the crypto context is already needed during setup so that it can be used
-    // in ssl_handshake_params_init() for the initialization of the digests.
+    // WARNING: This has to happen before mbedtls_ssl_setup() is called, as the
+    // crypto context is already needed during setup so that it can be used in
+    // ssl_handshake_params_init() for the initialization of the digests.
     mbedtls_ssl_set_crypto(&self->mbedtls.ssl, self->cfg.crypto.handle);
 
     // Set the send/recv callbacks to work on the socket context
@@ -451,7 +451,7 @@ handshakeImpl(
         case MBEDTLS_ERR_SSL_WANT_READ:
         case MBEDTLS_ERR_SSL_WANT_WRITE:
             // The send/recv callbacks would send WANT_READ/WANT_WRITE in case
-            // the socket I/O would block (e.g., 0 bytes available on read())
+            // the socket I/O would block (e.g. 0 bytes available on read()).
             Debug_LOG_INFO("mbedtls_ssl_handshake() would block");
             if (self->cfg.flags & OS_Tls_FLAG_NON_BLOCKING)
             {
@@ -489,15 +489,14 @@ writeImpl(
             switch (rc)
             {
             case 0:
-                // Server can send empty messages for randomization purposes,
-                // so this is not an error but we may want to notify the user
-                // anyways..
+                // Server can send empty messages for randomization purposes, so
+                // this is not an error but we want to notify the user anyways.
                 Debug_LOG_INFO("mbedtls_ssl_write() wrote 0 bytes");
                 continue;
             case MBEDTLS_ERR_SSL_WANT_WRITE:
-                // The write would block for some reason, even after we have done
-                // some partial writing. If we should not block ourselves, then
-                // return with OS_ERROR_WOULD_BLOCK. Otherwise, keep trying..
+                // The write could block for some reason, even after we have
+                // done some partial writing. If we do not want to block, return
+                // with OS_ERROR_WOULD_BLOCK. Otherwise, keep trying.
                 Debug_LOG_INFO("mbedtls_ssl_write() would block");
                 if (self->cfg.flags & OS_Tls_FLAG_NON_BLOCKING)
                 {
@@ -543,13 +542,12 @@ readImpl(
             switch (rc)
             {
             case 0:
-                // Server can send empty messages for randomization purposes,
-                // so this is not an error but we may want to notify the user
-                // anyways..
+                // Server can send empty messages for randomization purposes, so
+                // this is not an error but we want to notify the user anyways.
                 Debug_LOG_INFO("mbedtls_ssl_read() read 0 bytes");
                 continue;
             case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
-                // Server has signaled that the connection will be closed; we
+                // Server has signaled that the connection will be closed. We
                 // count this as success but terminate the SSL session here.
                 Debug_LOG_INFO("host has signaled that connection will be closed");
                 self->open = false;
@@ -757,7 +755,7 @@ TlsLib_reset(
 
     // Regardless of the success of resetImpl() we set the connection to closed,
     // because most likely a big part of the internal data structures will be
-    // re-set even in case of error.
+    // reset even in case of error.
     self->open = false;
 
     return resetImpl(self);
