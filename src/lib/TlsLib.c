@@ -272,6 +272,8 @@ setMbedTlsCipherSuites(
         MBEDTLS_TLS_DHE_RSA_WITH_AES_128_GCM_SHA256,
         [OS_Tls_CIPHERSUITE_ECDHE_RSA_WITH_AES_128_GCM_SHA256] =
         MBEDTLS_TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+
+        // TODO: Add MBEDTLS_TLS_RSA_WITH_AES_128_CBC_SHA here and everywhere
     };
 
     num = 0;
