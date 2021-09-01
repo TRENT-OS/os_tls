@@ -2,8 +2,7 @@
 
 ## Overview
 
-OS TLS Library provides a library that allows components to establish TLS
-connections
+OS TLS provides a library that allows components to establish TLS connections.
 
 ## Usage
 
@@ -13,5 +12,5 @@ etc.).
 
 ### Dependencies
 
-* configuration files
-* ??
+- configuration files
+- ??

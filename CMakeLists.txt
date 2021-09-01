@@ -1,5 +1,5 @@
 #
-# OS TLS library
+# OS TLS
 #
 # Copyright (C) 2019-2020, Hensoldt Cyber GmbH
 #
