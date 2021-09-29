@@ -1,5 +1,5 @@
-/**
- * Copyright (C) 2019-2020, Hensoldt Cyber GmbH
+/*
+ * Copyright (C) 2019-2021, HENSOLDT Cyber GmbH
  */
 
 #include "OS_Tls.h"
@@ -139,14 +139,19 @@ OS_Tls_read(
     void*           data,
     size_t*         dataSize)
 {
+    OS_Error_t err;
     CHECK_PTR_NOT_NULL(self);
 
     switch (self->mode)
     {
     case OS_Tls_MODE_LIBRARY:
-        return TlsLib_read(self->library, data, dataSize);
+        err = TlsLib_read(self->library, data, dataSize);
+        Debug_LOG_TRACE("TlsLib_read, ret: %d, size: %d", err, *dataSize);
+        return err;
     case OS_Tls_MODE_CLIENT:
-        return TlsLibClient_read(self->client, data, dataSize);
+        err = TlsLibClient_read(self->client, data, dataSize);
+        Debug_LOG_TRACE("TlsLibClient_read, ret: %d, size: %d", err, *dataSize);
+        return err;
     default:
         Debug_LOG_FATAL("TLS instance is configured in unknown mode!");
         return OS_ERROR_GENERIC;

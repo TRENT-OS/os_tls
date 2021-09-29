@@ -1,8 +1,10 @@
-/**
- * Copyright (C) 2019-2020, Hensoldt Cyber GmbH
+/*
+ * Copyright (C) 2019-2021, HENSOLDT Cyber GmbH
  */
 
 #include "OS_Tls.h"
+
+#include "OS_Network.h"
 
 #include "lib/TlsLib.h"
 
@@ -16,6 +18,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <sel4/sel4.h>
 
 struct TlsLib
 {
@@ -286,7 +290,7 @@ setMbedTlsSigHashes(
         }
     }
 
-    // mbedTls: list of allowed signature hashes, terminated by MBEDTLS_MD_NONE
+    // mbedTLS: list of allowed signature hashes, terminated by MBEDTLS_MD_NONE
     Debug_ASSERT(num < sizeof(sigHashes));
     sigHashes[num] = MBEDTLS_MD_NONE;
 }
@@ -312,6 +316,58 @@ setMbedTlsCerts(
     *caCerts   = cert;
 
     return true;
+}
+
+static int
+defaultSendFunc(
+    void*                ctx,
+    const unsigned char* buf,
+    size_t               len)
+{
+    OS_Error_t err;
+    OS_NetworkSocket_Handle_t* hSocket = (OS_NetworkSocket_Handle_t*) ctx;
+    size_t n;
+
+    err = OS_NetworkSocket_write(*hSocket, buf, len, &n);
+    if (err == OS_ERROR_TRY_AGAIN)
+    {
+        // nothing to read, return with
+        return MBEDTLS_ERR_SSL_WANT_WRITE;
+    }
+    else if (OS_SUCCESS != err)
+    {
+        Debug_LOG_ERROR("send / OS_NetworkSocket_write() failed with %d", err);
+        return err;
+    }
+
+    // success
+    return n;
+}
+
+static int
+defaultRecvFunc(
+    void*          ctx,
+    unsigned char* buf,
+    size_t         len)
+{
+    OS_Error_t err;
+    OS_NetworkSocket_Handle_t* hSocket = (OS_NetworkSocket_Handle_t*) ctx;
+    size_t n;
+
+    err = OS_NetworkSocket_read(*hSocket, buf, len, &n);
+    if (err == OS_ERROR_TRY_AGAIN)
+    {
+        // nothing to read, return with
+        return MBEDTLS_ERR_SSL_WANT_READ;
+    }
+    else if (OS_SUCCESS != err)
+    {
+        Debug_LOG_ERROR("recv / OS_NetworkSocket_read() failed with %d", err);
+        return err;
+    }
+
+    // success
+    return n;
 }
 
 static OS_Error_t
@@ -394,10 +450,35 @@ initImpl(
     // ssl_handshake_params_init() for the initialization of the digests.
     mbedtls_ssl_set_crypto(&self->mbedtls.ssl, self->cfg.crypto.handle);
 
-    // Set the send/recv callbacks to work on the socket context
-    mbedtls_ssl_set_bio(&self->mbedtls.ssl, self->cfg.socket.context,
-                        self->cfg.socket.send,
-                        self->cfg.socket.recv, NULL);
+    mbedtls_ssl_recv_t* recvFunc;
+    mbedtls_ssl_send_t* sendFunc;
+
+    // Set the send/recv callbacks to be used with mbedTLS.
+    // Users can specify their own implementations via OS_TLS_init().
+    // If no functions are defined, the default functions will be used.
+    if (self->cfg.socket.send)
+    {
+        sendFunc = self->cfg.socket.send;
+    }
+    else
+    {
+        sendFunc = defaultSendFunc;
+    }
+
+    if (self->cfg.socket.recv)
+    {
+        recvFunc = self->cfg.socket.recv;
+    }
+    else
+    {
+        recvFunc = defaultRecvFunc;
+    }
+
+    mbedtls_ssl_set_bio(&self->mbedtls.ssl,
+                        self->cfg.socket.context,
+                        sendFunc,
+                        recvFunc,
+                        NULL);
 
     if ((rc = mbedtls_ssl_setup(&self->mbedtls.ssl, &self->mbedtls.conf)) != 0)
     {
@@ -451,17 +532,22 @@ handshakeImpl(
         case MBEDTLS_ERR_SSL_WANT_READ:
         case MBEDTLS_ERR_SSL_WANT_WRITE:
             // The send/recv callbacks would send WANT_READ/WANT_WRITE in case
-            // the socket I/O would block (e.g. 0 bytes available on read()).
-            Debug_LOG_INFO("mbedtls_ssl_handshake() would block");
+            // the socket I/O would block.
             if (self->cfg.flags & OS_Tls_FLAG_NON_BLOCKING)
             {
                 return OS_ERROR_WOULD_BLOCK;
             }
+            seL4_Yield();
             continue;
         case OS_ERROR_CONNECTION_CLOSED:
-            Debug_LOG_ERROR("connection closed during mbedtls_ssl_handshake()");
+            Debug_LOG_ERROR("socket closed during mbedtls_ssl_handshake()");
             self->open = false;
             return OS_ERROR_CONNECTION_CLOSED;
+        case OS_ERROR_NETWORK_CONN_SHUTDOWN:
+            // Socket was closed by peer
+            Debug_LOG_ERROR("connection closed during mbedtls_ssl_handshake()");
+            self->open = false;
+            return OS_ERROR_NETWORK_CONN_SHUTDOWN;
         default:
             DEBUG_LOG_ERROR_MBEDTLS("mbedtls_ssl_handshake", rc);
             return OS_ERROR_ABORTED;
@@ -489,7 +575,7 @@ writeImpl(
             switch (rc)
             {
             case 0:
-                // Server can send empty messages for randomization purposes, so
+                // Client can send empty messages for randomization purposes, so
                 // this is not an error but we want to notify the user anyways.
                 Debug_LOG_INFO("mbedtls_ssl_write() wrote 0 bytes");
                 continue;
@@ -497,27 +583,39 @@ writeImpl(
                 // The write could block for some reason, even after we have
                 // done some partial writing. If we do not want to block, return
                 // with OS_ERROR_WOULD_BLOCK. Otherwise, keep trying.
-                Debug_LOG_INFO("mbedtls_ssl_write() would block");
                 if (self->cfg.flags & OS_Tls_FLAG_NON_BLOCKING)
                 {
                     return OS_ERROR_WOULD_BLOCK;
                 }
+                seL4_Yield();
                 continue;
             case OS_ERROR_CONNECTION_CLOSED:
-                Debug_LOG_ERROR("connection closed during mbedtls_ssl_write()");
+                Debug_LOG_ERROR("socket closed during mbedtls_ssl_write()");
                 self->open = false;
                 return OS_ERROR_CONNECTION_CLOSED;
+            case OS_ERROR_NETWORK_CONN_SHUTDOWN:
+                // Socket was closed by peer
+                Debug_LOG_ERROR("connection closed during mbedtls_ssl_write()");
+                self->open = false;
+                return OS_ERROR_NETWORK_CONN_SHUTDOWN;
             default:
                 DEBUG_LOG_ERROR_MBEDTLS("mbedtls_ssl_write", rc);
                 return OS_ERROR_ABORTED;
             }
         }
-        // Update pointer/len in case of partial writes
-        to_write  -= rc;
-        offs      += rc;
-        // Give back the amount of bytes actually written
-        *dataSize  = offs;
+        else
+        {
+            // Update pointer/len in case of partial writes
+            to_write  -= rc;
+            offs      += rc;
+            // We exit the loop with the first successfully read bytes.
+            // This shall ensure, that we always return, independent of
+            // capability to send data.
+            break;
+        }
     }
+    // Give back the amount of bytes actually written
+    *dataSize  = offs;
 
     return OS_SUCCESS;
 }
@@ -554,27 +652,40 @@ readImpl(
                 return OS_ERROR_CONNECTION_CLOSED;
             case MBEDTLS_ERR_SSL_WANT_READ:
                 // There were no bytes to read without blocking
-                Debug_LOG_INFO("mbedtls_ssl_read() would block");
                 if (self->cfg.flags & OS_Tls_FLAG_NON_BLOCKING)
                 {
                     return OS_ERROR_WOULD_BLOCK;
                 }
+                seL4_Yield();
                 continue;
             case OS_ERROR_CONNECTION_CLOSED:
-                Debug_LOG_ERROR("connection closed during mbedtls_ssl_read()");
+                // Socket was closed by network sock, OS_SOCK_EV_FIN received
+                Debug_LOG_ERROR("socket closed during mbedtls_ssl_read()");
                 self->open = false;
                 return OS_ERROR_CONNECTION_CLOSED;
+            case OS_ERROR_NETWORK_CONN_SHUTDOWN:
+                // Socket was closed by peer
+                Debug_LOG_ERROR("connection closed during mbedtls_ssl_read()");
+                self->open = false;
+                return OS_ERROR_NETWORK_CONN_SHUTDOWN;
             default:
                 DEBUG_LOG_ERROR_MBEDTLS("mbedtls_ssl_read", rc);
                 return OS_ERROR_ABORTED;
             }
         }
-        // Update pointer/len in case of partial read
-        to_read  -= rc;
-        offs     += rc;
-        // Give back amount of bytes actually read
-        *dataSize = offs;
+        else
+        {
+            // Update pointer/len in case of partial read
+            to_read  -= rc;
+            offs     += rc;
+            // We exit the loop with the first successfully read bytes.
+            // This shall ensure, that we always return, independent of the
+            // server response.
+            break;
+        }
     }
+    // Give back amount of bytes actually read
+    *dataSize = offs;
 
     return OS_SUCCESS;
 }
@@ -602,8 +713,6 @@ checkParams(
     CHECK_PTR_NOT_NULL(self);
     CHECK_PTR_NOT_NULL(cfg);
     CHECK_PTR_NOT_NULL(cfg->crypto.handle);
-    CHECK_PTR_NOT_NULL(cfg->socket.recv);
-    CHECK_PTR_NOT_NULL(cfg->socket.send);
 
     CHECK_FLAGS_NOT_ZERO(cfg->crypto.cipherSuites);
 

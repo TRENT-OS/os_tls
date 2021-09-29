@@ -1,5 +1,5 @@
-/**
- * Copyright (C) 2019-2020, Hensoldt Cyber GmbH
+/*
+ * Copyright (C) 2019-2021, HENSOLDT Cyber GmbH
  */
 
 #include "rpc/TlsLibClient.h"
@@ -87,13 +87,12 @@ TlsLibClient_read(
     void*           data,
     size_t*         dataSize)
 {
-    OS_Error_t rc;
-
     CHECK_PTR_NOT_NULL(self);
     CHECK_PTR_NOT_NULL(data);
     CHECK_PTR_NOT_NULL(dataSize);
 
-    if ((rc = self->rpc.read(dataSize)) == OS_SUCCESS)
+    OS_Error_t rc = self->rpc.read(dataSize);
+    if (rc == OS_SUCCESS)
     {
         if (*dataSize > OS_Dataport_getSize(self->rpc.dataport))
         {
