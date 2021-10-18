@@ -119,18 +119,26 @@ OS_Tls_write(
     const void*     data,
     size_t*         dataSize)
 {
+    OS_Error_t err;
+
     CHECK_PTR_NOT_NULL(self);
 
     switch (self->mode)
     {
     case OS_Tls_MODE_LIBRARY:
-        return TlsLib_write(self->library, data, dataSize);
+        err = TlsLib_write(self->library, data, dataSize);
+        Debug_LOG_TRACE("TlsLib_write, ret: %d, size: %d", err, *dataSize);
+        break;
     case OS_Tls_MODE_CLIENT:
-        return TlsLibClient_write(self->client, data, dataSize);
+        err = TlsLibClient_write(self->client, data, dataSize);
+        Debug_LOG_TRACE("TlsLibClient_write, ret: %d, size: %d", err, *dataSize);
+        break;
     default:
         Debug_LOG_FATAL("TLS instance is configured in unknown mode!");
-        return OS_ERROR_GENERIC;
+        err = OS_ERROR_GENERIC;
     }
+
+    return err;
 }
 
 OS_Error_t
@@ -140,6 +148,7 @@ OS_Tls_read(
     size_t*         dataSize)
 {
     OS_Error_t err;
+
     CHECK_PTR_NOT_NULL(self);
 
     switch (self->mode)
@@ -147,15 +156,17 @@ OS_Tls_read(
     case OS_Tls_MODE_LIBRARY:
         err = TlsLib_read(self->library, data, dataSize);
         Debug_LOG_TRACE("TlsLib_read, ret: %d, size: %d", err, *dataSize);
-        return err;
+        break;
     case OS_Tls_MODE_CLIENT:
         err = TlsLibClient_read(self->client, data, dataSize);
         Debug_LOG_TRACE("TlsLibClient_read, ret: %d, size: %d", err, *dataSize);
-        return err;
+        break;
     default:
         Debug_LOG_FATAL("TLS instance is configured in unknown mode!");
-        return OS_ERROR_GENERIC;
+        err = OS_ERROR_GENERIC;
     }
+
+    return err;
 }
 
 OS_Error_t

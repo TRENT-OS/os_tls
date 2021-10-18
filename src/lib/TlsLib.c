@@ -329,19 +329,20 @@ defaultSendFunc(
     size_t n;
 
     err = OS_NetworkSocket_write(*hSocket, buf, len, &n);
-    if (err == OS_ERROR_TRY_AGAIN)
-    {
-        // nothing to read, return with
-        return MBEDTLS_ERR_SSL_WANT_WRITE;
-    }
-    else if (OS_SUCCESS != err)
-    {
-        Debug_LOG_ERROR("send / OS_NetworkSocket_write() failed with %d", err);
-        return err;
-    }
 
-    // success
-    return n;
+    switch (err)
+    {
+    case OS_SUCCESS:
+        // success
+        return n;
+    case OS_ERROR_TRY_AGAIN:
+        // could not write
+        return MBEDTLS_ERR_SSL_WANT_WRITE;
+    default:
+        // error case
+        Debug_LOG_ERROR("send / OS_NetworkSocket_write() failed with %d", err);
+        return err;;
+    }
 }
 
 static int
@@ -355,19 +356,20 @@ defaultRecvFunc(
     size_t n;
 
     err = OS_NetworkSocket_read(*hSocket, buf, len, &n);
-    if (err == OS_ERROR_TRY_AGAIN)
+
+    switch (err)
     {
-        // nothing to read, return with
+    case OS_SUCCESS:
+        // success
+        return n;
+    case OS_ERROR_TRY_AGAIN:
+        // nothing to read
         return MBEDTLS_ERR_SSL_WANT_READ;
-    }
-    else if (OS_SUCCESS != err)
-    {
+    default:
+        // error case
         Debug_LOG_ERROR("recv / OS_NetworkSocket_read() failed with %d", err);
         return err;
     }
-
-    // success
-    return n;
 }
 
 static OS_Error_t
@@ -450,8 +452,8 @@ initImpl(
     // ssl_handshake_params_init() for the initialization of the digests.
     mbedtls_ssl_set_crypto(&self->mbedtls.ssl, self->cfg.crypto.handle);
 
-    mbedtls_ssl_recv_t* recvFunc;
-    mbedtls_ssl_send_t* sendFunc;
+    mbedtls_ssl_send_t* sendFunc = defaultSendFunc;
+    mbedtls_ssl_recv_t* recvFunc = defaultRecvFunc;
 
     // Set the send/recv callbacks to be used with mbedTLS.
     // Users can specify their own implementations via OS_TLS_init().
@@ -460,18 +462,10 @@ initImpl(
     {
         sendFunc = self->cfg.socket.send;
     }
-    else
-    {
-        sendFunc = defaultSendFunc;
-    }
 
     if (self->cfg.socket.recv)
     {
         recvFunc = self->cfg.socket.recv;
-    }
-    else
-    {
-        recvFunc = defaultRecvFunc;
     }
 
     mbedtls_ssl_set_bio(&self->mbedtls.ssl,
@@ -531,7 +525,7 @@ handshakeImpl(
             return OS_SUCCESS;
         case MBEDTLS_ERR_SSL_WANT_READ:
         case MBEDTLS_ERR_SSL_WANT_WRITE:
-            // The send/recv callbacks would send WANT_READ/WANT_WRITE in case
+            // The send/recv callbacks return WANT_READ/WANT_WRITE in case
             // the socket I/O would block.
             if (self->cfg.flags & OS_Tls_FLAG_NON_BLOCKING)
             {
@@ -562,23 +556,14 @@ writeImpl(
     size_t*     dataSize)
 {
     int rc;
-    size_t to_write, offs;
 
-    to_write = *dataSize;
-    offs     = 0;
-
-    while (to_write > 0)
+    for (;;)
     {
-        rc = mbedtls_ssl_write(&self->mbedtls.ssl, data + offs, to_write);
-        if (rc <= 0)
+        rc = mbedtls_ssl_write(&self->mbedtls.ssl, data, *dataSize);
+        if (rc < 0)
         {
             switch (rc)
             {
-            case 0:
-                // Client can send empty messages for randomization purposes, so
-                // this is not an error but we want to notify the user anyways.
-                Debug_LOG_INFO("mbedtls_ssl_write() wrote 0 bytes");
-                continue;
             case MBEDTLS_ERR_SSL_WANT_WRITE:
                 // The write could block for some reason, even after we have
                 // done some partial writing. If we do not want to block, return
@@ -605,17 +590,17 @@ writeImpl(
         }
         else
         {
-            // Update pointer/len in case of partial writes
-            to_write  -= rc;
-            offs      += rc;
-            // We exit the loop with the first successfully read bytes.
+            // We exit the loop with the first successfully written bytes or
+            // 0 bytes, in case 0 bytes were requested to be sent.
             // This shall ensure, that we always return, independent of
             // capability to send data.
+            // This also supports sending empty Tls packages of dataSize 0.
+
+            // Give back the amount of bytes actually written
+            *dataSize  = rc;
             break;
         }
     }
-    // Give back the amount of bytes actually written
-    *dataSize  = offs;
 
     return OS_SUCCESS;
 }
@@ -627,21 +612,20 @@ readImpl(
     size_t*   dataSize)
 {
     int rc;
-    size_t to_read, offs;
 
-    to_read = *dataSize;
-    offs    = 0;
-
-    while (to_read > 0)
+    for (;;)
     {
-        rc = mbedtls_ssl_read(&self->mbedtls.ssl, data + offs, to_read);
+        rc = mbedtls_ssl_read(&self->mbedtls.ssl, data, *dataSize);
         if (rc <= 0)
         {
             switch (rc)
             {
             case 0:
                 // Server can send empty messages for randomization purposes, so
-                // this is not an error but we want to notify the user anyways.
+                // this is not an error.
+                // We will silently read all 0-byte packages and not return
+                // here. But we still want to notify the user with a log
+                // message.
                 Debug_LOG_INFO("mbedtls_ssl_read() read 0 bytes");
                 continue;
             case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
@@ -675,17 +659,15 @@ readImpl(
         }
         else
         {
-            // Update pointer/len in case of partial read
-            to_read  -= rc;
-            offs     += rc;
             // We exit the loop with the first successfully read bytes.
             // This shall ensure, that we always return, independent of the
             // server response.
+
+            // Give back amount of bytes actually read
+            *dataSize = rc;
             break;
         }
     }
-    // Give back amount of bytes actually read
-    *dataSize = offs;
 
     return OS_SUCCESS;
 }
