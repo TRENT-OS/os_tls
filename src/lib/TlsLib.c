@@ -4,7 +4,7 @@
 
 #include "OS_Tls.h"
 
-#include "OS_Network.h"
+#include "OS_Socket.h"
 
 #include "lib/TlsLib.h"
 
@@ -325,10 +325,10 @@ defaultSendFunc(
     size_t               len)
 {
     OS_Error_t err;
-    OS_NetworkSocket_Handle_t* hSocket = (OS_NetworkSocket_Handle_t*) ctx;
+    OS_Socket_Handle_t* hSocket = (OS_Socket_Handle_t*) ctx;
     size_t n;
 
-    err = OS_NetworkSocket_write(*hSocket, buf, len, &n);
+    err = OS_Socket_write(*hSocket, buf, len, &n);
 
     switch (err)
     {
@@ -340,7 +340,7 @@ defaultSendFunc(
         return MBEDTLS_ERR_SSL_WANT_WRITE;
     default:
         // error case
-        Debug_LOG_ERROR("send / OS_NetworkSocket_write() failed with %d", err);
+        Debug_LOG_ERROR("send / OS_Socket_write() failed with %d", err);
         return err;;
     }
 }
@@ -352,10 +352,10 @@ defaultRecvFunc(
     size_t         len)
 {
     OS_Error_t err;
-    OS_NetworkSocket_Handle_t* hSocket = (OS_NetworkSocket_Handle_t*) ctx;
+    OS_Socket_Handle_t* hSocket = (OS_Socket_Handle_t*) ctx;
     size_t n;
 
-    err = OS_NetworkSocket_read(*hSocket, buf, len, &n);
+    err = OS_Socket_read(*hSocket, buf, len, &n);
 
     switch (err)
     {
@@ -367,7 +367,7 @@ defaultRecvFunc(
         return MBEDTLS_ERR_SSL_WANT_READ;
     default:
         // error case
-        Debug_LOG_ERROR("recv / OS_NetworkSocket_read() failed with %d", err);
+        Debug_LOG_ERROR("recv / OS_Socket_read() failed with %d", err);
         return err;
     }
 }
