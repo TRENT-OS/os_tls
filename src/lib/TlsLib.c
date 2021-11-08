@@ -3,9 +3,8 @@
  */
 
 #include "OS_Dataport.h"
-#include "OS_Tls.h"
-
 #include "OS_Socket.h"
+#include "OS_Tls.h"
 
 #include "lib/TlsLib.h"
 
