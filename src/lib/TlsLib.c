@@ -2,6 +2,7 @@
  * Copyright (C) 2019-2021, HENSOLDT Cyber GmbH
  */
 
+#include "OS_Dataport.h"
 #include "OS_Tls.h"
 
 #include "OS_Socket.h"
@@ -328,6 +329,15 @@ defaultSendFunc(
     OS_Socket_Handle_t* hSocket = (OS_Socket_Handle_t*) ctx;
     size_t n;
 
+    // If the requested length exceeds the dataport size, reduce it to the max
+    // size of the dataport.
+    const size_t maxPossibleLen = OS_Dataport_getSize(hSocket->ctx.dataport);
+
+    if (len > maxPossibleLen)
+    {
+        len = maxPossibleLen;
+    }
+
     err = OS_Socket_write(*hSocket, buf, len, &n);
 
     switch (err)
@@ -354,6 +364,15 @@ defaultRecvFunc(
     OS_Error_t err;
     OS_Socket_Handle_t* hSocket = (OS_Socket_Handle_t*) ctx;
     size_t n;
+
+    // If the requested length exceeds the dataport size, reduce it to the max
+    // size of the dataport.
+    const size_t maxPossibleLen = OS_Dataport_getSize(hSocket->ctx.dataport);
+
+    if (len > maxPossibleLen)
+    {
+        len = maxPossibleLen;
+    }
 
     err = OS_Socket_read(*hSocket, buf, len, &n);
 
