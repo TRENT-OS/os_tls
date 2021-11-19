@@ -720,8 +720,10 @@ checkParams(
     {
         CHECK_PTR_NOT_NULL(cfg->crypto.caCerts);
         CHECK_STR_NOT_EMPTY(cfg->crypto.caCerts);
-        if ( (strstr(cfg->crypto.caCerts, "-----BEGIN CERTIFICATE-----") == NULL ||
-              strstr(cfg->crypto.caCerts, "-----END CERTIFICATE-----") == NULL) )
+        if ( (strstr(cfg->crypto.caCerts,
+                     "-----BEGIN CERTIFICATE-----") == NULL)
+             || (strstr(cfg->crypto.caCerts,
+                        "-----END CERTIFICATE-----") == NULL) )
         {
             Debug_LOG_ERROR("Presented CA cert(s) does not have BEGIN/END "
                             "(maybe it is not PEM encoded?)");
