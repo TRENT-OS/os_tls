@@ -682,6 +682,9 @@ handshakeImpl(
         switch (rc)
         {
         case 0:
+            Debug_LOG_INFO("mbedtls_ssl_handshake() successful with "
+                           "ciphersuite %s",
+                           mbedtls_ssl_get_ciphersuite(&self->mbedtls.ssl));
             return OS_SUCCESS;
         case MBEDTLS_ERR_SSL_WANT_READ:
         case MBEDTLS_ERR_SSL_WANT_WRITE:
