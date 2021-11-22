@@ -35,3 +35,28 @@ target_link_libraries(${PROJECT_NAME}
         lib_debug
         lib_macros
 )
+
+#------------------------------------------------------------------------------
+project(os_tls_server C)
+
+add_library(${PROJECT_NAME} INTERFACE)
+
+target_sources(${PROJECT_NAME}
+    INTERFACE
+        "src/OS_Tls.c"
+        "src/lib/TlsLib.c"
+        "src/rpc/TlsLibClient.c"
+)
+
+target_include_directories(${PROJECT_NAME}
+    INTERFACE
+        "inc"
+)
+
+target_link_libraries(${PROJECT_NAME}
+    INTERFACE
+        3rdparty_mbedtls_for_tls_server
+        os_core_api
+        lib_debug
+        lib_macros
+)

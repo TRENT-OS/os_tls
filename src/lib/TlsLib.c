@@ -462,8 +462,17 @@ initImpl(
 
     // Apply default configuration first, then override parts of it
     mbedtls_ssl_config_init(&self->mbedtls.conf);
+
+    // NOTE: Use MBEDTLS_SSL_SRV_C to decide whether to configure the endpoint
+    // as TLS client or TLS server.
+#ifndef MBEDTLS_SSL_SRV_C
+    const int endpoint = MBEDTLS_SSL_IS_CLIENT;
+#else // MBEDTLS_SSL_SRV_C
+    const int endpoint = MBEDTLS_SSL_IS_SERVER;
+#endif
+
     if ((rc = mbedtls_ssl_config_defaults(&self->mbedtls.conf,
-                                          MBEDTLS_SSL_IS_CLIENT,
+                                          endpoint,
                                           MBEDTLS_SSL_TRANSPORT_STREAM,
                                           MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
     {
@@ -510,9 +519,14 @@ initImpl(
     // Which certs do we accept (hashes, rsa bitlen)?
     mbedtls_ssl_conf_cert_profile(&self->mbedtls.conf, &self->mbedtls.certProfile);
 
+#ifndef MBEDTLS_SSL_SRV_C
+    // NOTE: Use MBEDTLS_SSL_SRV_C to hide this function for TLS servers because
+    // it is only available for TLS clients.
+
     // What is the minimum bitlen we allow for DH-based key exchanges?
     mbedtls_ssl_conf_dhm_min_bitlen(&self->mbedtls.conf,
                                     self->policy.dhMinBits);
+#endif
 
     // If we have debug, use internal logging function
     mbedtls_ssl_conf_dbg(&self->mbedtls.conf, logDebug, NULL);
