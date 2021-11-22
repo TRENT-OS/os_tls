@@ -32,6 +32,7 @@ target_link_libraries(${PROJECT_NAME}
     INTERFACE
         3rdparty_mbedtls_for_tls_client
         os_core_api
+        lib_compiler
         lib_debug
         lib_macros
 )
@@ -57,6 +58,7 @@ target_link_libraries(${PROJECT_NAME}
     INTERFACE
         3rdparty_mbedtls_for_tls_server
         os_core_api
+        lib_compiler
         lib_debug
         lib_macros
 )
