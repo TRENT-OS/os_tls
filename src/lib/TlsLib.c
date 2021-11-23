@@ -833,6 +833,21 @@ readImpl(
 }
 
 static OS_Error_t
+closeNotifyImpl(
+    TlsLib_t* self)
+{
+    int rc;
+
+    if ((rc  = mbedtls_ssl_close_notify(&self->mbedtls.ssl)) != 0)
+    {
+        DEBUG_LOG_ERROR_MBEDTLS("mbedtls_ssl_close_notify", rc);
+        return OS_ERROR_ABORTED;
+    }
+
+    return OS_SUCCESS;
+}
+
+static OS_Error_t
 resetImpl(
     TlsLib_t* self)
 {
@@ -1032,6 +1047,15 @@ TlsLib_reset(
     TlsLib_t* self)
 {
     CHECK_PTR_NOT_NULL(self);
+
+    if (self->open)
+    {
+        // Ignore error and reset connection afterwards in any case.
+        DECL_UNUSED_VAR(OS_Error_t error);
+
+        // Notify peer that an open connection will be reset.
+        error = closeNotifyImpl(self);
+    }
 
     // Regardless of the success of resetImpl() we set the connection to closed,
     // because most likely a big part of the internal data structures will be
