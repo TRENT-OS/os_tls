@@ -876,6 +876,13 @@ checkParams(
 
     CHECK_FLAGS_NOT_ZERO(cfg->crypto.cipherSuites);
 
+    if ( (!(cfg->flags & OS_Tls_FLAG_NO_VERIFY))
+         && (cfg->crypto.caCerts == NULL))
+    {
+        Debug_LOG_ERROR("Flag NO_VERIFY is set but no CA cert(s) presented.");
+        return OS_ERROR_INVALID_PARAMETER;
+    }
+
     if (cfg->crypto.caCerts != NULL)
     {
         CHECK_STR_NOT_EMPTY(cfg->crypto.caCerts);
