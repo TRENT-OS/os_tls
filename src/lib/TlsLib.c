@@ -37,11 +37,11 @@ struct TlsLib
         int sigHashes[__OS_Tls_DIGEST_MAX];
 
         unsigned char* caCertsBuf;
-        size_t caCertsBufLen;
+        size_t caCertsBufSize;
         unsigned char* ownCertBuf;
-        size_t ownCertBufLen;
+        size_t ownCertBufSize;
         unsigned char* privateKeyBuf;
-        size_t privateKeyBufLen;
+        size_t privateKeyBufSize;
     } mbedtls;
     TlsLib_Config_t cfg;
     OS_Tls_Policy_t policy;
@@ -305,79 +305,87 @@ setMbedTlsSigHashes(
 
 static bool
 setMbedTlsCaCerts(
-    const TlsLib_t* self,
-    size_t*         caCertsBufLen,
-    unsigned char** pCaCertsBuf)
+    TlsLib_t* const self)
 {
+    size_t size = 0;
     unsigned char* cert = NULL;
 
     if (self->cfg.crypto.caCerts != NULL)
     {
-        size_t len = strlen(self->cfg.crypto.caCerts);
-        if ((cert = calloc(1, len + 1)) == NULL)
+        size = strlen(self->cfg.crypto.caCerts) + 1;
+
+        // Allocate own memory
+        cert = calloc(1, size);
+
+        if (cert == NULL)
         {
             return false;
         }
 
-        memcpy(cert, self->cfg.crypto.caCerts, len);
-
-        *caCertsBufLen = len + 1;
+        // Copy data to own memory
+        memcpy(cert, self->cfg.crypto.caCerts, size);
     }
 
-    *pCaCertsBuf = cert;
+    self->mbedtls.caCertsBufSize = size;
+    self->mbedtls.caCertsBuf = cert;
 
     return true;
 }
 
 static bool
 setMbedTlsOwnCert(
-    const TlsLib_t* self,
-    size_t*         ownCertBufLen,
-    unsigned char** pOwnCertBuf)
+    TlsLib_t* const self)
 {
+    size_t size = 0;
     unsigned char* cert = NULL;
 
     if (self->cfg.crypto.ownCert != NULL)
     {
-        size_t len = strlen(self->cfg.crypto.ownCert);
-        if ((cert = calloc(1, len + 1)) == NULL)
+        size = strlen(self->cfg.crypto.ownCert) + 1;
+
+        // Allocate own memory
+        cert = calloc(1, size);
+
+        if (cert == NULL)
         {
             return false;
         }
 
-        memcpy(cert, self->cfg.crypto.ownCert, len);
-
-        *ownCertBufLen = len + 1;
+        // Copy data to own memory
+        memcpy(cert, self->cfg.crypto.ownCert, size);
     }
 
-    *pOwnCertBuf = cert;
+    self->mbedtls.ownCertBufSize = size;
+    self->mbedtls.ownCertBuf = cert;
 
     return true;
 }
 
-
 static bool
 setMbedTlsPrivateKey(
-    const TlsLib_t* self,
-    size_t*         privateKeyBufLen,
-    unsigned char** pPrivateKey)
+    TlsLib_t* const self)
 {
+    size_t size = 0;
     unsigned char* key = NULL;
 
     if (self->cfg.crypto.privateKey != NULL)
     {
-        size_t len = strlen(self->cfg.crypto.privateKey);
-        if ((key = calloc(1, len + 1)) == NULL)
+        size = strlen(self->cfg.crypto.privateKey) + 1;
+
+        // Allocate own memory
+        key = calloc(1, size);
+
+        if (key == NULL)
         {
             return false;
         }
 
-        memcpy(key, self->cfg.crypto.privateKey, len);
-
-        *privateKeyBufLen = len + 1;
+        // Copy data to own memory
+        memcpy(key, self->cfg.crypto.privateKey, size);
     }
 
-    *pPrivateKey = key;
+    self->mbedtls.privateKeyBufSize = size;
+    self->mbedtls.privateKeyBuf = key;
 
     return true;
 }
@@ -486,24 +494,21 @@ initImpl(
     setMbedTlsCertProfile(self, &self->mbedtls.certProfile);
 
     // Make local copy of CA cert(s)
-    if (!setMbedTlsCaCerts(self, &self->mbedtls.caCertsBufLen,
-                           &self->mbedtls.caCertsBuf))
+    if (!setMbedTlsCaCerts(self))
     {
         Debug_LOG_ERROR("Could not copy CA cert(s)");
         return OS_ERROR_INSUFFICIENT_SPACE;
     }
 
     // Make local copy of own cert
-    if (!setMbedTlsOwnCert(self, &self->mbedtls.ownCertBufLen,
-                           &self->mbedtls.ownCertBuf))
+    if (!setMbedTlsOwnCert(self))
     {
         Debug_LOG_ERROR("Could not copy own cert");
         return OS_ERROR_INSUFFICIENT_SPACE;
     }
 
     // Make local copy of private key
-    if (!setMbedTlsPrivateKey(self, &self->mbedtls.privateKeyBufLen,
-                              &self->mbedtls.privateKeyBuf))
+    if (!setMbedTlsPrivateKey(self))
     {
         Debug_LOG_ERROR("Could not copy private key");
         return OS_ERROR_INSUFFICIENT_SPACE;
@@ -553,7 +558,7 @@ initImpl(
     {
         if ((rc = mbedtls_x509_crt_parse(&self->mbedtls.caCerts,
                                          self->mbedtls.caCertsBuf,
-                                         self->mbedtls.caCertsBufLen)) != 0)
+                                         self->mbedtls.caCertsBufSize)) != 0)
         {
             DEBUG_LOG_ERROR_MBEDTLS("mbedtls_x509_crt_parse", rc);
             goto err1;
@@ -568,7 +573,7 @@ initImpl(
     {
         if ((rc = mbedtls_x509_crt_parse(&self->mbedtls.ownCert,
                                          self->mbedtls.ownCertBuf,
-                                         self->mbedtls.ownCertBufLen)) != 0)
+                                         self->mbedtls.ownCertBufSize)) != 0)
         {
             DEBUG_LOG_ERROR_MBEDTLS("mbedtls_x509_crt_parse", rc);
             goto err1;
@@ -581,7 +586,8 @@ initImpl(
     {
         if ((rc = mbedtls_pk_parse_key(&self->mbedtls.privateKey,
                                        self->mbedtls.privateKeyBuf,
-                                       self->mbedtls.privateKeyBufLen, NULL, 0)) != 0)
+                                       self->mbedtls.privateKeyBufSize, NULL,
+                                       0)) != 0)
         {
             DEBUG_LOG_ERROR_MBEDTLS("mbedtls_pk_parse_key", rc);
             goto err1;
