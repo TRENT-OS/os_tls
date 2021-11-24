@@ -28,12 +28,20 @@ struct TlsLib
     {
         mbedtls_ssl_context ssl;
         mbedtls_ssl_config conf;
-        mbedtls_x509_crt cert;
         mbedtls_x509_crt_profile certProfile;
+        mbedtls_x509_crt caCerts;
+        mbedtls_x509_crt ownCert;
+        mbedtls_pk_context privateKey;
+
         int cipherSuites[__OS_Tls_CIPHERSUITE_MAX];
         int sigHashes[__OS_Tls_DIGEST_MAX];
-        unsigned char* caCerts;
-        size_t caCertLen;
+
+        unsigned char* caCertsBuf;
+        size_t caCertsBufLen;
+        unsigned char* ownCertBuf;
+        size_t ownCertBufLen;
+        unsigned char* privateKeyBuf;
+        size_t privateKeyBufLen;
     } mbedtls;
     TlsLib_Config_t cfg;
     OS_Tls_Policy_t policy;
@@ -296,24 +304,80 @@ setMbedTlsSigHashes(
 }
 
 static bool
-setMbedTlsCerts(
+setMbedTlsCaCerts(
     const TlsLib_t* self,
-    size_t*         caCertLen,
-    unsigned char** caCerts)
+    size_t*         caCertsBufLen,
+    unsigned char** pCaCertsBuf)
 {
-    size_t len;
-    unsigned char* cert;
+    unsigned char* cert = NULL;
 
-    len = strlen(self->cfg.crypto.caCerts);
-    if ((cert = calloc(1, len + 1)) == NULL)
+    if (self->cfg.crypto.caCerts != NULL)
     {
-        return false;
+        size_t len = strlen(self->cfg.crypto.caCerts);
+        if ((cert = calloc(1, len + 1)) == NULL)
+        {
+            return false;
+        }
+
+        memcpy(cert, self->cfg.crypto.caCerts, len);
+
+        *caCertsBufLen = len + 1;
     }
 
-    memcpy(cert, self->cfg.crypto.caCerts, len);
+    *pCaCertsBuf = cert;
 
-    *caCertLen = len + 1;
-    *caCerts   = cert;
+    return true;
+}
+
+static bool
+setMbedTlsOwnCert(
+    const TlsLib_t* self,
+    size_t*         ownCertBufLen,
+    unsigned char** pOwnCertBuf)
+{
+    unsigned char* cert = NULL;
+
+    if (self->cfg.crypto.ownCert != NULL)
+    {
+        size_t len = strlen(self->cfg.crypto.ownCert);
+        if ((cert = calloc(1, len + 1)) == NULL)
+        {
+            return false;
+        }
+
+        memcpy(cert, self->cfg.crypto.ownCert, len);
+
+        *ownCertBufLen = len + 1;
+    }
+
+    *pOwnCertBuf = cert;
+
+    return true;
+}
+
+
+static bool
+setMbedTlsPrivateKey(
+    const TlsLib_t* self,
+    size_t*         privateKeyBufLen,
+    unsigned char** pPrivateKey)
+{
+    unsigned char* key = NULL;
+
+    if (self->cfg.crypto.privateKey != NULL)
+    {
+        size_t len = strlen(self->cfg.crypto.privateKey);
+        if ((key = calloc(1, len + 1)) == NULL)
+        {
+            return false;
+        }
+
+        memcpy(key, self->cfg.crypto.privateKey, len);
+
+        *privateKeyBufLen = len + 1;
+    }
+
+    *pPrivateKey = key;
 
     return true;
 }
@@ -411,11 +475,28 @@ initImpl(
     setMbedTlsCipherSuites(self, self->mbedtls.cipherSuites);
     setMbedTlsSigHashes(self, self->mbedtls.sigHashes);
     setMbedTlsCertProfile(self, &self->mbedtls.certProfile);
-    // Make local copy of ca cert list
-    if (!(self->cfg.flags & OS_Tls_FLAG_NO_VERIFY) &&
-        !setMbedTlsCerts(self, &self->mbedtls.caCertLen, &self->mbedtls.caCerts))
+
+    // Make local copy of CA cert(s)
+    if (!setMbedTlsCaCerts(self, &self->mbedtls.caCertsBufLen,
+                           &self->mbedtls.caCertsBuf))
     {
-        Debug_LOG_INFO("Could not copy CA cert(s)");
+        Debug_LOG_ERROR("Could not copy CA cert(s)");
+        return OS_ERROR_INSUFFICIENT_SPACE;
+    }
+
+    // Make local copy of own cert
+    if (!setMbedTlsOwnCert(self, &self->mbedtls.ownCertBufLen,
+                           &self->mbedtls.ownCertBuf))
+    {
+        Debug_LOG_ERROR("Could not copy own cert");
+        return OS_ERROR_INSUFFICIENT_SPACE;
+    }
+
+    // Make local copy of private key
+    if (!setMbedTlsPrivateKey(self, &self->mbedtls.privateKeyBufLen,
+                              &self->mbedtls.privateKeyBuf))
+    {
+        Debug_LOG_ERROR("Could not copy private key");
         return OS_ERROR_INSUFFICIENT_SPACE;
     }
 
@@ -449,15 +530,56 @@ initImpl(
     }
     else
     {
-        mbedtls_x509_crt_init(&self->mbedtls.cert);
-        if ((rc = mbedtls_x509_crt_parse(&self->mbedtls.cert, self->mbedtls.caCerts,
-                                         self->mbedtls.caCertLen)) != 0)
+        mbedtls_ssl_conf_authmode(&self->mbedtls.conf, MBEDTLS_SSL_VERIFY_REQUIRED);
+    }
+
+    mbedtls_x509_crt_init(&self->mbedtls.caCerts);
+
+    if (self->cfg.crypto.caCerts != NULL)
+    {
+        if ((rc = mbedtls_x509_crt_parse(&self->mbedtls.caCerts,
+                                         self->mbedtls.caCertsBuf,
+                                         self->mbedtls.caCertsBufLen)) != 0)
         {
             DEBUG_LOG_ERROR_MBEDTLS("mbedtls_x509_crt_parse", rc);
             goto err1;
         }
-        mbedtls_ssl_conf_ca_chain(&self->mbedtls.conf, &self->mbedtls.cert, NULL);
-        mbedtls_ssl_conf_authmode(&self->mbedtls.conf, MBEDTLS_SSL_VERIFY_REQUIRED);
+    }
+
+    mbedtls_ssl_conf_ca_chain(&self->mbedtls.conf, &self->mbedtls.caCerts, NULL);
+
+    mbedtls_x509_crt_init(&self->mbedtls.ownCert);
+
+    if (self->cfg.crypto.ownCert != NULL)
+    {
+        if ((rc = mbedtls_x509_crt_parse(&self->mbedtls.ownCert,
+                                         self->mbedtls.ownCertBuf,
+                                         self->mbedtls.ownCertBufLen)) != 0)
+        {
+            DEBUG_LOG_ERROR_MBEDTLS("mbedtls_x509_crt_parse", rc);
+            goto err1;
+        }
+    }
+
+    mbedtls_pk_init(&self->mbedtls.privateKey);
+
+    if (self->cfg.crypto.privateKey != NULL)
+    {
+        if ((rc = mbedtls_pk_parse_key(&self->mbedtls.privateKey,
+                                       self->mbedtls.privateKeyBuf,
+                                       self->mbedtls.privateKeyBufLen, NULL, 0)) != 0)
+        {
+            DEBUG_LOG_ERROR_MBEDTLS("mbedtls_pk_parse_key", rc);
+            goto err1;
+        }
+    }
+
+    if ((rc = mbedtls_ssl_conf_own_cert(&self->mbedtls.conf,
+                                        &self->mbedtls.ownCert,
+                                        &self->mbedtls.privateKey)) != 0)
+    {
+        DEBUG_LOG_ERROR_MBEDTLS("mbedtls_ssl_conf_own_cert", rc);
+        goto err1;
     }
 
     // Output levels: (0) none, (1) error, (2) state change, (3) informational
@@ -503,10 +625,9 @@ initImpl(
 err2:
     mbedtls_ssl_free(&self->mbedtls.ssl);
 err1:
-    if (!(self->cfg.flags & OS_Tls_FLAG_NO_VERIFY))
-    {
-        mbedtls_x509_crt_free(&self->mbedtls.cert);
-    }
+    mbedtls_x509_crt_free(&self->mbedtls.caCerts);
+    mbedtls_x509_crt_free(&self->mbedtls.ownCert);
+    mbedtls_pk_free(&self->mbedtls.privateKey);
 err0:
     mbedtls_ssl_config_free(&self->mbedtls.conf);
 
@@ -518,12 +639,13 @@ freeImpl(
     TlsLib_t* self)
 {
     mbedtls_ssl_free(&self->mbedtls.ssl);
-    if (!(self->cfg.flags & OS_Tls_FLAG_NO_VERIFY))
-    {
-        mbedtls_x509_crt_free(&self->mbedtls.cert);
-    }
+    mbedtls_x509_crt_free(&self->mbedtls.caCerts);
+    mbedtls_x509_crt_free(&self->mbedtls.ownCert);
+    mbedtls_pk_free(&self->mbedtls.privateKey);
     mbedtls_ssl_config_free(&self->mbedtls.conf);
-    free(self->mbedtls.caCerts);
+    free(self->mbedtls.caCertsBuf);
+    free(self->mbedtls.ownCertBuf);
+    free(self->mbedtls.privateKeyBuf);
 
     return OS_SUCCESS;
 }
@@ -716,9 +838,8 @@ checkParams(
 
     CHECK_FLAGS_NOT_ZERO(cfg->crypto.cipherSuites);
 
-    if (!(cfg->flags & OS_Tls_FLAG_NO_VERIFY))
+    if (cfg->crypto.caCerts != NULL)
     {
-        CHECK_PTR_NOT_NULL(cfg->crypto.caCerts);
         CHECK_STR_NOT_EMPTY(cfg->crypto.caCerts);
         if ( (strstr(cfg->crypto.caCerts,
                      "-----BEGIN CERTIFICATE-----") == NULL)
@@ -726,6 +847,34 @@ checkParams(
                         "-----END CERTIFICATE-----") == NULL) )
         {
             Debug_LOG_ERROR("Presented CA cert(s) does not have BEGIN/END "
+                            "(maybe it is not PEM encoded?)");
+            return OS_ERROR_INVALID_PARAMETER;
+        }
+    }
+
+    if (cfg->crypto.ownCert != NULL)
+    {
+        CHECK_STR_NOT_EMPTY(cfg->crypto.ownCert);
+        if ( (strstr(cfg->crypto.ownCert,
+                     "-----BEGIN CERTIFICATE-----") == NULL)
+             || (strstr(cfg->crypto.ownCert,
+                        "-----END CERTIFICATE-----") == NULL) )
+        {
+            Debug_LOG_ERROR("Presented own cert does not have BEGIN/END "
+                            "(maybe it is not PEM encoded?)");
+            return OS_ERROR_INVALID_PARAMETER;
+        }
+    }
+
+    if (cfg->crypto.privateKey != NULL)
+    {
+        CHECK_STR_NOT_EMPTY(cfg->crypto.privateKey);
+        if ( (strstr(cfg->crypto.privateKey,
+                     "-----BEGIN RSA PRIVATE KEY-----") == NULL)
+             || (strstr(cfg->crypto.privateKey,
+                        "-----END RSA PRIVATE KEY-----") == NULL) )
+        {
+            Debug_LOG_ERROR("Presented private key does not have BEGIN/END "
                             "(maybe it is not PEM encoded?)");
             return OS_ERROR_INVALID_PARAMETER;
         }
