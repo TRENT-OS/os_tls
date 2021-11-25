@@ -174,8 +174,10 @@ derivePolicy(
     {
         if (cfg->crypto.cipherSuites & OS_Tls_CIPHERSUITE_FLAGS(i))
         {
-            policy->dhMinBits  = getMinOf(policy->dhMinBits, policies[i].dhMinBits);
-            policy->rsaMinBits = getMinOf(policy->rsaMinBits, policies[i].rsaMinBits);
+            policy->dhMinBits  = getMinOf(policy->dhMinBits,
+                                          policies[i].dhMinBits);
+            policy->rsaMinBits = getMinOf(policy->rsaMinBits,
+                                          policies[i].rsaMinBits);
             policy->certDigests      |= policies[i].certDigests;
             policy->handshakeDigests |= policies[i].handshakeDigests;
         }
@@ -524,13 +526,15 @@ initImpl(
 
     // Which ciphersuites are allowed? This heavily depends on the state of the
     // modified mbedTLS and cannot simply be changed!
-    mbedtls_ssl_conf_ciphersuites(&self->mbedtls.conf, self->mbedtls.cipherSuites);
+    mbedtls_ssl_conf_ciphersuites(&self->mbedtls.conf,
+                                  self->mbedtls.cipherSuites);
 
     // Which hashes do we allow for peer signatures?
     mbedtls_ssl_conf_sig_hashes(&self->mbedtls.conf, self->mbedtls.sigHashes);
 
     // Which certs do we accept (hashes, rsa bitlen)?
-    mbedtls_ssl_conf_cert_profile(&self->mbedtls.conf, &self->mbedtls.certProfile);
+    mbedtls_ssl_conf_cert_profile(&self->mbedtls.conf,
+                                  &self->mbedtls.certProfile);
 
 #ifdef MBEDTLS_SSL_CLI_C
     // NOTE: Use MBEDTLS_SSL_CLI_C to hide this function for TLS servers because
@@ -552,12 +556,14 @@ initImpl(
     {
         // We need to have the option to disable cert verification, even though
         // it is not advisable.
-        Debug_LOG_INFO("TLS certificate verification is disabled, this is NOT secure!");
+        Debug_LOG_INFO("TLS certificate verification is disabled, this is NOT "
+                       "secure!");
         mbedtls_ssl_conf_authmode(&self->mbedtls.conf, MBEDTLS_SSL_VERIFY_NONE);
     }
     else
     {
-        mbedtls_ssl_conf_authmode(&self->mbedtls.conf, MBEDTLS_SSL_VERIFY_REQUIRED);
+        mbedtls_ssl_conf_authmode(&self->mbedtls.conf,
+                                  MBEDTLS_SSL_VERIFY_REQUIRED);
     }
 
     mbedtls_x509_crt_init(&self->mbedtls.caCerts);
@@ -573,7 +579,8 @@ initImpl(
         }
     }
 
-    mbedtls_ssl_conf_ca_chain(&self->mbedtls.conf, &self->mbedtls.caCerts, NULL);
+    mbedtls_ssl_conf_ca_chain(&self->mbedtls.conf, &self->mbedtls.caCerts,
+                              NULL);
 
     mbedtls_x509_crt_init(&self->mbedtls.ownCert);
 
@@ -800,9 +807,10 @@ readImpl(
                 Debug_LOG_INFO("mbedtls_ssl_read() read 0 bytes");
                 continue;
             case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
-                // Server has signaled that the connection will be closed. We
+                // Peer has signaled that the connection will be closed. We
                 // count this as success but terminate the SSL session here.
-                Debug_LOG_INFO("host has signaled that connection will be closed");
+                Debug_LOG_INFO("host has signaled that connection will be "
+                               "closed");
                 self->open = false;
                 return OS_ERROR_CONNECTION_CLOSED;
             case MBEDTLS_ERR_SSL_WANT_READ:
