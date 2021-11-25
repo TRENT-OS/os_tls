@@ -905,6 +905,24 @@ checkParams(
         }
     }
 
+#ifdef MBEDTLS_SSL_SRV_C
+    // NOTE: Use MBEDTLS_SSL_SRV_C because own cert and private key are only
+    // mandatory for TLS servers, not for TLS clients.
+
+    if (cfg->crypto.ownCert == NULL)
+    {
+        Debug_LOG_ERROR("TLS server active but no own cert presented.");
+        return OS_ERROR_INVALID_PARAMETER;
+    }
+
+    if (cfg->crypto.privateKey == NULL)
+    {
+        Debug_LOG_ERROR("TLS server active but no private key presented.");
+        return OS_ERROR_INVALID_PARAMETER;
+    }
+
+#endif
+
     if (cfg->crypto.ownCert != NULL)
     {
         CHECK_STR_NOT_EMPTY(cfg->crypto.ownCert);
