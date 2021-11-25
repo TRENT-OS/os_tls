@@ -526,7 +526,7 @@ initImpl(
     // modified mbedTLS and cannot simply be changed!
     mbedtls_ssl_conf_ciphersuites(&self->mbedtls.conf, self->mbedtls.cipherSuites);
 
-    // Which hashes do we allow for server signatures?
+    // Which hashes do we allow for peer signatures?
     mbedtls_ssl_conf_sig_hashes(&self->mbedtls.conf, self->mbedtls.sigHashes);
 
     // Which certs do we accept (hashes, rsa bitlen)?
@@ -792,7 +792,7 @@ readImpl(
             switch (rc)
             {
             case 0:
-                // Server can send empty messages for randomization purposes, so
+                // Peer can send empty messages for randomization purposes, so
                 // this is not an error.
                 // We will silently read all 0-byte packages and not return
                 // here. But we still want to notify the user with a log
@@ -830,9 +830,9 @@ readImpl(
         }
         else
         {
-            // We exit the loop with the first successfully read bytes.
-            // This shall ensure, that we always return, independent of the
-            // server response.
+            // We exit the loop with the first successfully read bytes. This
+            // shall ensure, that we always return, independent of the peer
+            // response.
 
             // Give back amount of bytes actually read
             *dataSize = rc;
