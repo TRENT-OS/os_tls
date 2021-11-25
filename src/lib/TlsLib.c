@@ -21,6 +21,14 @@
 
 #include <sel4/sel4.h>
 
+#if defined(MBEDTLS_SSL_CLI_C) && defined(MBEDTLS_SSL_SRV_C)
+#error "Used 3rdparty_mbedtls_* library shall not set client AND server."
+#endif
+
+#if !defined(MBEDTLS_SSL_CLI_C) && !defined(MBEDTLS_SSL_SRV_C)
+#error "Used 3rdparty_mbedtls_* library shall set either client OR server."
+#endif
+
 struct TlsLib
 {
     bool open;
@@ -471,9 +479,9 @@ initImpl(
     // Apply default configuration first, then override parts of it
     mbedtls_ssl_config_init(&self->mbedtls.conf);
 
-    // NOTE: Use MBEDTLS_SSL_SRV_C to decide whether to configure the endpoint
+    // NOTE: Use MBEDTLS_SSL_CLI_C to decide whether to configure the endpoint
     // as TLS client or TLS server.
-#ifndef MBEDTLS_SSL_SRV_C
+#ifdef MBEDTLS_SSL_CLI_C
     const int endpoint = MBEDTLS_SSL_IS_CLIENT;
 #else // MBEDTLS_SSL_SRV_C
     const int endpoint = MBEDTLS_SSL_IS_SERVER;
@@ -524,8 +532,8 @@ initImpl(
     // Which certs do we accept (hashes, rsa bitlen)?
     mbedtls_ssl_conf_cert_profile(&self->mbedtls.conf, &self->mbedtls.certProfile);
 
-#ifndef MBEDTLS_SSL_SRV_C
-    // NOTE: Use MBEDTLS_SSL_SRV_C to hide this function for TLS servers because
+#ifdef MBEDTLS_SSL_CLI_C
+    // NOTE: Use MBEDTLS_SSL_CLI_C to hide this function for TLS servers because
     // it is only available for TLS clients.
 
     // What is the minimum bitlen we allow for DH-based key exchanges?
