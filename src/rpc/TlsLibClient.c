@@ -73,8 +73,17 @@ TlsLibClient_write(
     CHECK_PTR_NOT_NULL(self);
     CHECK_PTR_NOT_NULL(data);
     CHECK_PTR_NOT_NULL(dataSize);
+    CHECK_DATAPORT_SET(self->rpc.dataport);
+    CHECK_VALUE_NOT_ZERO(OS_Dataport_getSize(self->rpc.dataport));
 
-    CHECK_DATAPORT_SIZE(self->rpc.dataport, *dataSize);
+    // If the requested length exceeds the dataport size, reduce it to the size
+    // of the dataport.
+    const size_t maxPossibleLen = OS_Dataport_getSize(self->rpc.dataport);
+
+    if (*dataSize > maxPossibleLen)
+    {
+        *dataSize = maxPossibleLen;
+    }
 
     memcpy(OS_Dataport_getBuf(self->rpc.dataport), data, *dataSize);
 
@@ -90,18 +99,22 @@ TlsLibClient_read(
     CHECK_PTR_NOT_NULL(self);
     CHECK_PTR_NOT_NULL(data);
     CHECK_PTR_NOT_NULL(dataSize);
+    CHECK_DATAPORT_SET(self->rpc.dataport);
+    CHECK_VALUE_NOT_ZERO(OS_Dataport_getSize(self->rpc.dataport));
+
+    // If the requested length exceeds the dataport size, reduce it to the size
+    // of the dataport.
+    const size_t maxPossibleLen = OS_Dataport_getSize(self->rpc.dataport);
+
+    if (*dataSize > maxPossibleLen)
+    {
+        *dataSize = maxPossibleLen;
+    }
 
     OS_Error_t rc = self->rpc.read(dataSize);
     if (rc == OS_SUCCESS)
     {
-        if (*dataSize > OS_Dataport_getSize(self->rpc.dataport))
-        {
-            return OS_ERROR_INSUFFICIENT_SPACE;
-        }
-        else
-        {
-            memcpy(data, OS_Dataport_getBuf(self->rpc.dataport), *dataSize);
-        }
+        memcpy(data, OS_Dataport_getBuf(self->rpc.dataport), *dataSize);
     }
 
     return rc;
